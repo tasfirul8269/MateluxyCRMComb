@@ -1,0 +1,306 @@
+'use client';
+
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { cn } from '@/lib/utils';
+import {
+    LayoutDashboard,
+    Building2,
+    FileText,
+    Users,
+    UserCircle,
+    Settings,
+    Lock,
+    Bell,
+    FolderOpen,
+    Activity,
+    ChevronDown,
+    ChevronRight,
+    Briefcase,
+    Layers,
+    Code2,
+    Construction
+} from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+
+interface MenuItem {
+    title: string;
+    icon: React.ElementType;
+    href: string;
+    submenu?: { title: string; href: string; underDevelopment?: boolean }[];
+    underDevelopment?: boolean;
+}
+
+// Items that are under development
+const UNDER_DEVELOPMENT_ITEMS = [
+    'File Manager',
+    'Agent App Notifications',
+    'System Settings',
+    'Password Manager'
+];
+
+const MENU_ITEMS: MenuItem[] = [
+    { title: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
+    {
+        title: 'Properties',
+        icon: Building2,
+        href: '/properties',
+        submenu: [
+            { title: 'All Properties', href: '/properties/all' },
+            { title: 'Add New Property', href: '/properties/new' },
+            { title: 'Draft Properties', href: '/properties/draft' },
+            { title: 'From Agents', href: '/properties/agents' },
+            { title: 'Unpublished', href: '/properties/unpublished' },
+            { title: 'Rejected Properties', href: '/properties/rejected' },
+            { title: 'Sold Properties', href: '/properties/sold' },
+            { title: 'Rented Properties', href: '/properties/rented' },
+        ],
+    },
+    {
+        title: 'Off Plan',
+        icon: Layers,
+        href: '/off-plan',
+        submenu: [
+            { title: 'Add New Property', href: '/off-plan/new' },
+            { title: 'All Properties', href: '/off-plan' },
+            { title: 'Draft Properties', href: '/off-plan/draft' },
+            { title: 'From Agents', href: '/off-plan/agents' },
+            { title: 'Unpublished', href: '/off-plan/unpublished' },
+        ],
+    },
+    {
+        title: 'Leads',
+        icon: Users,
+        href: '/leads',
+        submenu: [
+            { title: 'Add Lead', href: '/leads/new' },
+            { title: 'Website Leads', href: '/leads/website', underDevelopment: true },
+            { title: '3rd Party Leads', href: '/leads/3rd-party' },
+            { title: 'Property Finder', href: '/leads/property-finder' },
+        ],
+    },
+    { title: 'Agents', icon: UserCircle, href: '/agents' },
+    { title: 'Developers', icon: Briefcase, href: '/developers' },
+    { title: 'Integration', icon: Code2, href: '/integration' },
+    { title: 'Activity Logs', icon: Activity, href: '/activity-logs' },
+    { title: 'File Manager', icon: FolderOpen, href: '/file-manager', underDevelopment: true },
+    { title: 'Agent App Notifications', icon: Bell, href: '/notifications', underDevelopment: true },
+    { title: 'Admin & Editors', icon: Lock, href: '/users' },
+    { title: 'System Settings', icon: Settings, href: '/settings', underDevelopment: true },
+    { title: 'Password Manager', icon: Lock, href: '/passwords', underDevelopment: true },
+];
+
+export function Sidebar() {
+    const pathname = usePathname();
+    // No menu expanded by default
+    const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
+    const [showUnderDevDialog, setShowUnderDevDialog] = useState(false);
+    const [selectedFeature, setSelectedFeature] = useState<string>('');
+
+    // Accordion behavior: only one menu can be expanded at a time
+    const toggleMenu = (title: string) => {
+        setExpandedMenu((prev) => prev === title ? null : title);
+    };
+
+    const handleUnderDevClick = (title: string) => {
+        setExpandedMenu(null);
+        setSelectedFeature(title);
+        setShowUnderDevDialog(true);
+    };
+
+    return (
+        <>
+            <div className="font-outfit backdrop-blur-[30px] relative flex h-full w-72 flex-col bg-[#FFFFFF8A] overflow-hidden">
+                {/* Background Effects */}
+                <div
+                    className="absolute pointer-events-none rounded-full mix-blend-multiply filter blur-[300px] opacity-100"
+                    style={{
+                        width: '150px',
+                        height: '150px',
+                        backgroundColor: '#FF9829',
+                        top: '150px',
+                        left: '-100px',
+                        zIndex: 0
+                    }}
+                />
+                <div
+                    className="absolute pointer-events-none rounded-full mix-blend-multiply filter blur-[200px] opacity-58"
+                    style={{
+                        width: '197px',
+                        height: '239px',
+                        backgroundColor: '#70CBFF',
+                        top: '500px',
+                        left: '-50px',
+                        zIndex: 0
+                    }}
+                />
+
+                {/* Menu */}
+                <div className="relative z-10 flex-1 overflow-y-auto px-4 pt-6 pb-20 scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                    <nav className="space-y-1">
+                        {MENU_ITEMS.map((item) => {
+                            const isParentActive = item.submenu?.some(sub => pathname === sub.href);
+                            const isDirectActive = pathname === item.href;
+                            const isExpanded = expandedMenu === item.title;
+                            const isUnderDev = UNDER_DEVELOPMENT_ITEMS.includes(item.title);
+
+                            if (item.submenu) {
+                                return (
+                                    <div key={item.title}>
+                                        <Link
+                                            href={item.submenu[0]?.href || '#'}
+                                            onClick={() => {
+                                                if (expandedMenu !== item.title) {
+                                                    setExpandedMenu(item.title);
+                                                }
+                                            }}
+                                            className={cn(
+                                                "group flex w-full items-center justify-between rounded-xl px-3 py-3 text-[15px] font-medium transition-all",
+                                                isParentActive
+                                                    ? "bg-[#00AAFF] text-white shadow-sm"
+                                                    : "text-[#222F3E] hover:bg-gray-50"
+                                            )}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <item.icon className={cn("h-5 w-5", isParentActive ? "text-white" : "text-[#8E99A4]")} />
+                                                <span>{item.title}</span>
+                                            </div>
+                                            <div
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    toggleMenu(item.title);
+                                                }}
+                                                className="p-1 hover:bg-white/10 rounded-full transition-colors"
+                                            >
+                                                <ChevronDown
+                                                    className={cn(
+                                                        "h-4 w-4 transition-transform duration-200",
+                                                        isParentActive ? "text-white" : "text-[#8E99A4]",
+                                                        isExpanded ? "rotate-180" : ""
+                                                    )}
+                                                />
+                                            </div>
+                                        </Link>
+
+                                        {/* Submenu with hierarchy lines */}
+                                        {isExpanded && (
+                                            <div className="ml-6 mt-1 relative">
+                                                {/* Vertical hierarchy line */}
+                                                <div className="absolute left-0 top-0 bottom-2 w-px bg-[#E4E9EE]" />
+
+                                                <div className="space-y-0">
+                                                    {item.submenu.map((sub, index) => {
+                                                        const isSubActive = pathname === sub.href;
+                                                        return (
+                                                            <div key={sub.title} className="relative">
+                                                                {/* Horizontal branch line */}
+                                                                <div className="absolute left-0 top-1/2 w-3 h-px bg-[#E4E9EE]" />
+
+                                                                {sub.underDevelopment ? (
+                                                                    <button
+                                                                        onClick={() => handleUnderDevClick(sub.title)}
+                                                                        className="block pl-5 py-2 text-[14px] font-medium transition-colors w-full text-left text-[#8E99A4] hover:text-[#222F3E]"
+                                                                    >
+                                                                        {sub.title}
+                                                                    </button>
+                                                                ) : (
+                                                                    <Link
+                                                                        href={sub.href}
+                                                                        className={cn(
+                                                                            "block pl-5 py-2 text-[14px] font-medium transition-colors",
+                                                                            isSubActive
+                                                                                ? "text-[#00AAFF]"
+                                                                                : "text-[#8E99A4] hover:text-[#222F3E]"
+                                                                        )}
+                                                                    >
+                                                                        {sub.title}
+                                                                    </Link>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            }
+
+                            // Handle under development items
+                            if (isUnderDev) {
+                                return (
+                                    <button
+                                        key={item.title}
+                                        onClick={() => handleUnderDevClick(item.title)}
+                                        className={cn(
+                                            "group flex w-full items-center justify-between rounded-xl px-3 py-3 text-[15px] font-medium transition-all",
+                                            "text-[#222F3E] hover:bg-gray-50"
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <item.icon className="h-5 w-5 text-[#8E99A4]" />
+                                            <span>{item.title}</span>
+                                        </div>
+                                    </button>
+                                );
+                            }
+
+                            return (
+                                <Link
+                                    key={item.title}
+                                    href={item.href}
+                                    onClick={() => setExpandedMenu(null)}
+                                    className={cn(
+                                        "group flex w-full items-center justify-between rounded-xl px-3 py-3 text-[15px] font-medium transition-all",
+                                        isDirectActive
+                                            ? "bg-[#00AAFF] text-white shadow-sm"
+                                            : "text-[#222F3E] hover:bg-gray-50"
+                                    )}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <item.icon className={cn("h-5 w-5", isDirectActive ? "text-white" : "text-[#8E99A4]")} />
+                                        <span>{item.title}</span>
+                                    </div>
+                                </Link>
+                            );
+                        })}
+                    </nav>
+                </div>
+            </div>
+
+            {/* Under Development Dialog */}
+            <Dialog open={showUnderDevDialog} onOpenChange={setShowUnderDevDialog}>
+                <DialogContent className="sm:max-w-[400px] rounded-[24px] p-8 text-center">
+                    <div className="flex flex-col items-center">
+                        <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mb-6">
+                            <Construction className="w-10 h-10 text-amber-500" />
+                        </div>
+                        <DialogHeader className="space-y-3">
+                            <DialogTitle className="text-xl font-semibold text-gray-900">
+                                Under Development
+                            </DialogTitle>
+                            <DialogDescription className="text-gray-500 text-[15px] leading-relaxed">
+                                <span className="font-medium text-gray-700">{selectedFeature}</span> is currently under development and will be available soon. We're working hard to bring you this feature!
+                            </DialogDescription>
+                        </DialogHeader>
+                        <Button
+                            onClick={() => setShowUnderDevDialog(false)}
+                            className="mt-6 bg-[#00AAFF] hover:bg-[#0099DD] text-white px-8 h-11 rounded-xl font-medium"
+                        >
+                            Got it
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        </>
+    );
+}

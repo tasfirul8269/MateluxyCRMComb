@@ -42,7 +42,7 @@ export default function DashboardPage() {
                 {/* Stats Row - Load immediately for fast first paint */}
                 <StatsCards />
 
-                <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-8">
+                <div className="grid grid-cols-1 xl:grid-cols-[1fr_340px] gap-8 mb-8">
                     {/* Left Column - Main Charts (Lazy loaded) */}
                     <div className="flex flex-col gap-0">
                         {/* Tendency Chart */}
@@ -53,11 +53,6 @@ export default function DashboardPage() {
                         {/* Category Charts Row */}
                         <Suspense fallback={<ChartSkeleton height={280} />}>
                             <CategoryCharts />
-                        </Suspense>
-
-                        {/* Top Locations */}
-                        <Suspense fallback={<ChartSkeleton height={320} />}>
-                            <TopLocationsChart />
                         </Suspense>
                     </div>
 
@@ -74,6 +69,11 @@ export default function DashboardPage() {
                         </Suspense>
                     </div>
                 </div>
+
+                {/* Top Locations - Full Width */}
+                <Suspense fallback={<ChartSkeleton height={320} />}>
+                    <TopLocationsChart />
+                </Suspense>
             </div>
         </div>
     );

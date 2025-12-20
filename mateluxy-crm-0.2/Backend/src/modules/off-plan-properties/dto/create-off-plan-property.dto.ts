@@ -1,63 +1,56 @@
-import { IsString, IsNotEmpty, IsNumber, IsOptional, Min, IsArray, IsObject, ValidateIf, IsBoolean } from 'class-validator';
+import { IsString, IsNumber, IsOptional, Min, IsArray, IsObject, IsBoolean } from 'class-validator';
 
 export class CreateOffPlanPropertyDto {
     @IsOptional()
     @IsBoolean()
     isActive?: boolean;
 
-    @IsNotEmpty()
+    @IsOptional()
     @IsString()
-    developerId: string;
+    developerId?: string;
 
     // Specific Details
-    @ValidateIf(o => o.isActive === true)
-    @IsNotEmpty()
+    @IsOptional()
     @IsString()
-    emirate: string;
+    emirate?: string;
 
-    @ValidateIf(o => o.isActive === true)
-    @IsNotEmpty()
+    @IsOptional()
     @IsString()
-    launchType: string;
+    launchType?: string;
 
-    @ValidateIf(o => o.isActive === true)
-    @IsNotEmpty()
+    @IsOptional()
     @IsString()
-    projectHighlight: string;
+    projectHighlight?: string;
 
-    @ValidateIf(o => o.isActive === true)
-    @IsNotEmpty()
+    @IsOptional()
     @IsArray()
     @IsString({ each: true })
-    propertyType: string[];
+    propertyType?: string[];
 
     @IsOptional()
     @IsNumber()
     @Min(0)
     plotArea?: number;
 
-    @ValidateIf(o => o.isActive === true)
-    @IsNotEmpty()
+    @IsOptional()
     @IsNumber()
     @Min(0)
-    area: number;
+    area?: number;
 
-    @ValidateIf(o => o.isActive === true)
-    @IsNotEmpty()
+    @IsOptional()
     @IsNumber()
     @Min(0)
-    bedrooms: number;
+    bedrooms?: number;
 
     @IsOptional()
     @IsNumber()
     @Min(0)
     kitchens?: number;
 
-    @ValidateIf(o => o.isActive === true)
-    @IsNotEmpty()
+    @IsOptional()
     @IsNumber()
     @Min(0)
-    bathrooms: number;
+    bathrooms?: number;
 
     // Locations
     @IsOptional()
@@ -128,10 +121,9 @@ export class CreateOffPlanPropertyDto {
     };
 
     // DLD & Status
-    @ValidateIf(o => o.isActive === true)
-    @IsNotEmpty()
+    @IsOptional()
     @IsString()
-    dldPermitNumber: string;
+    dldPermitNumber?: string;
 
     @IsOptional()
     @IsString()
@@ -151,20 +143,17 @@ export class CreateOffPlanPropertyDto {
     handoverDate?: string;
 
     // General Details
-    @ValidateIf(o => o.isActive === true)
-    @IsNotEmpty()
+    @IsOptional()
     @IsString()
-    projectTitle: string;
+    projectTitle?: string;
 
-    @ValidateIf(o => o.isActive === true)
-    @IsNotEmpty()
+    @IsOptional()
     @IsString()
-    shortDescription: string;
+    shortDescription?: string;
 
-    @ValidateIf(o => o.isActive === true)
-    @IsNotEmpty()
+    @IsOptional()
     @IsString()
-    projectDescription: string;
+    projectDescription?: string;
 
     // Media
     @IsOptional()
@@ -194,7 +183,6 @@ export class CreateOffPlanPropertyDto {
     interiorMedia?: string[];
 
     // Additional
-    @ValidateIf(o => o.isActive === true)
     @IsOptional()
     @IsString()
     reference?: string;

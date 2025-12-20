@@ -36,15 +36,15 @@ const tabs = [
 
 const propertySchema = z.object({
     // Specific Details
-    emirate: z.string().min(1, 'Emirate is required'),
-    launchType: z.string().min(1, 'Launch type is required'),
-    projectHighlight: z.string().min(1, 'Project highlight is required'),
-    propertyType: z.array(z.string()).min(1, 'At least one property type is required'),
+    emirate: z.string().optional(),
+    launchType: z.string().optional(),
+    projectHighlight: z.string().optional(),
+    propertyType: z.array(z.string()).optional(),
     plotArea: z.number().min(0).optional(),
-    area: z.number().min(0, 'Area is required'),
-    bedrooms: z.number().min(0, 'Bedrooms is required'),
+    area: z.number().min(0).optional(),
+    bedrooms: z.number().min(0).optional(),
     kitchens: z.number().min(0).optional(),
-    bathrooms: z.number().min(0, 'Bathrooms is required'),
+    bathrooms: z.number().min(0).optional(),
 
     // Locations
     address: z.string().optional(),
@@ -78,16 +78,16 @@ const propertySchema = z.object({
     }).optional(),
 
     // DLD & Status
-    dldPermitNumber: z.string().min(1, 'DLD Permit Number is required'),
+    dldPermitNumber: z.string().optional(),
     dldQrCode: z.string().optional(),
     projectStage: z.string().optional(),
     constructionProgress: z.number().min(0).max(100).optional(),
     handoverDate: z.string().optional(),
 
     // General Details
-    projectTitle: z.string().min(1, 'Project title is required'),
-    shortDescription: z.string().min(1, 'Short description is required'),
-    projectDescription: z.string().min(1, 'Project description is required'),
+    projectTitle: z.string().optional(),
+    shortDescription: z.string().optional(),
+    projectDescription: z.string().optional(),
 
     // Media
     coverPhoto: z.string().optional(),
@@ -98,7 +98,7 @@ const propertySchema = z.object({
     interiorMedia: z.array(z.string()).optional(),
 
     // Additional
-    reference: z.string().min(1, 'Reference is required'),
+    reference: z.string().optional(),
     brochure: z.string().optional(),
     amenitiesCover: z.string().optional(),
     amenitiesTitle: z.string().optional(),
@@ -116,7 +116,7 @@ const propertySchema = z.object({
 
 
     // Agent
-    assignedAgentId: z.string().min(1, 'Agent is required'),
+    assignedAgentId: z.string().optional(),
 });
 
 type PropertyFormValues = z.infer<typeof propertySchema>;

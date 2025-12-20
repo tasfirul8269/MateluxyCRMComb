@@ -164,4 +164,39 @@ export class LeadsService {
 
         return stats;
     }
+    async getLeadSourceStats() {
+        const stats = await this.prisma.lead.groupBy({
+            by: ['source'],
+            _count: {
+                _all: true
+            }
+        });
+
+        const result = {
+            facebook: 0,
+            instagram: 0,
+            tiktok: 0,
+            mateluxy: 0, // Website/Other
+            total: 0
+        };
+
+        stats.forEach(group => {
+            const count = group._count._all;
+            const source = (group.source || '').toLowerCase();
+            result.total += count;
+
+            if (source.includes('facebook')) {
+                result.facebook += count;
+            } else if (source.includes('instagram')) {
+                result.instagram += count;
+            } else if (source.includes('tiktok')) {
+                result.tiktok += count;
+            } else {
+                // Default everything else to Mateluxy/Website for now as per design
+                result.mateluxy += count;
+            }
+        });
+
+        return result;
+    }
 }

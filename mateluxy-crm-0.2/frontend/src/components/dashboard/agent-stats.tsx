@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Crown } from 'lucide-react';
+import Image from 'next/image';
 import { useQuery } from '@tanstack/react-query';
 import { agentService } from '@/lib/services/agent.service';
 
@@ -71,8 +72,8 @@ export function AgentStats() {
         return (
             <div className="space-y-6">
                 <div className="mb-2">
-                    <h3 className="text-[#8F9BB3] text-sm font-medium mb-4">Best Selling Agent</h3>
-                    <div className="bg-gradient-to-r from-[#F8FAFC] to-[#F1F5F9] border border-[#EDF1F7] rounded-[20px] p-5 h-[180px] flex items-center justify-center">
+                    <h3 className="text-[#8F9BB3] text-[16px] font-medium mb-4">Best Selling Agent</h3>
+                    <div className="bg-gradient-to-r from-[#F8FAFC] to-[#F1F5F9] border border-[#EDF1F7] rounded-[20px] p-5 h-[120px] flex items-center justify-center">
                         <p className="text-[#8F9BB3] text-sm">No agents with sold/rented properties yet</p>
                     </div>
                 </div>
@@ -87,65 +88,91 @@ export function AgentStats() {
     }
 
     return (
-        <div className="space-y-6">
-            <div className="mb-2">
-                <h3 className="text-[#8F9BB3] text-sm font-medium mb-4">Best Selling Agent</h3>
-                <div className="bg-gradient-to-r from-[#FFFBEB] to-[#FEF3C7] border border-[#FDE68A] rounded-[20px] p-5 relative overflow-hidden h-[180px] flex items-center">
-                    <div className="absolute top-4 left-4 text-[#F59E0B]">
-                        <Crown className="w-6 h-6 fill-current" />
-                    </div>
+        <div className="space-y-4">
+            <div className="mb-4">
+                <h3 className="text-[#8F9BB3] text-[14px] font-medium mb-4">Best Selling Agent</h3>
+                <div className="bg-white border border-[#FFC300] rounded-[20px] p-4 relative overflow-hidden flex items-center h-[96px]">
 
-                    <div className="flex items-center gap-5 relative z-10 pl-4 w-full">
-                        <div className="w-16 h-16 rounded-full border-4 border-white overflow-hidden shadow-sm shrink-0 bg-gray-100">
-                            {bestAgent.photoUrl ? (
-                                <img src={bestAgent.photoUrl} alt={bestAgent.name} className="w-full h-full object-cover" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-400 text-xl font-bold">
-                                    {bestAgent.name.charAt(0)}
-                                </div>
-                            )}
+                    {/* Ellipse 1: x: 250px, y: -47px */}
+                    <div
+                        className="absolute rounded-full pointer-events-none blur-[50px]"
+                        style={{
+                            width: '116px',
+                            height: '116px',
+                            left: '250px',
+                            top: '-47px',
+                            backgroundColor: '#FFDB6E',
+                            opacity: 0.63
+                        }}
+                    />
+
+                    {/* Ellipse 2: x: -13px, y: 77px */}
+                    <div
+                        className="absolute rounded-full pointer-events-none blur-[50px]"
+                        style={{
+                            width: '116px',
+                            height: '116px',
+                            left: '-13px',
+                            top: '77px',
+                            backgroundColor: '#FFDB6E',
+                            opacity: 0.63
+                        }}
+                    />
+
+                    <div className="flex items-center gap-4 relative z-10 pl-2 w-full">
+                        {/* Profile Image Container */}
+                        <div className="relative shrink-0">
+                            {/* Crown "wearing" position - Adjusted for SVG */}
+                            <div className="absolute -top-4 -left-3 z-20 transform -rotate-12">
+                                <Image
+                                    src="/crown_icon.svg"
+                                    alt="Crown"
+                                    width={28}
+                                    height={28}
+                                    className="w-8 h-8"
+                                />
+                            </div>
+
+                            <div className="w-[60px] h-[60px] rounded-full overflow-hidden shadow-sm bg-gray-100 relative z-10">
+                                {bestAgent.photoUrl ? (
+                                    <img src={bestAgent.photoUrl} alt={bestAgent.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-gray-400 text-xl font-bold">
+                                        {bestAgent.name.charAt(0)}
+                                    </div>
+                                )}
+                            </div>
                         </div>
+
                         <div>
-                            <h4 className="text-[18px] font-bold text-[#1A1A1A]">{bestAgent.name}</h4>
-                            <p className="text-[#6B7280] text-sm">{bestAgent.position}</p>
-                            <p className="text-[#F59E0B] text-sm font-semibold mt-1">
-                                {bestAgent.totalDeals} {bestAgent.totalDeals === 1 ? 'Deal' : 'Deals'}
-                                <span className="text-[#6B7280] font-normal"> ({bestAgent.soldCount} sold, {bestAgent.rentedCount} rented)</span>
-                            </p>
+                            <h4 className="text-[15px] font-bold text-[#1A1A1A] leading-tight">{bestAgent.name}</h4>
+                            <p className="text-[#94A3B8] text-[12px] font-normal">{bestAgent.position}</p>
                         </div>
                     </div>
-                    {/* Decorative blurred circle */}
-                    <div className="absolute -top-10 -right-10 w-40 h-40 bg-[#FCD34D] opacity-20 rounded-full blur-3xl"></div>
                 </div>
             </div>
 
             <div>
-                <h3 className="text-[#8F9BB3] text-sm font-medium mb-4">Top agents</h3>
+                <h3 className="text-[#8F9BB3] text-[14px] font-medium mb-4">Top agents</h3>
                 <div className="bg-white rounded-[20px] border border-[#EDF1F7] p-5 space-y-5">
                     {remainingAgents.length === 0 ? (
                         <p className="text-[#8F9BB3] text-sm text-center">No other agents with deals</p>
                     ) : (
-                        remainingAgents.map((agent, index) => (
-                            <div key={agent.id} className="flex items-center justify-between pb-4 last:pb-0 border-b border-[#EDF1F7] last:border-0 last:mb-0">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100 shrink-0">
-                                        {agent.photoUrl ? (
-                                            <img src={agent.photoUrl} alt={agent.name} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm font-bold">
-                                                {agent.name.charAt(0)}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <h4 className="text-[14px] font-bold text-[#1A1A1A]">{agent.name}</h4>
-                                        <p className="text-[#8F9BB3] text-[11px]">{agent.position}</p>
-                                    </div>
+                        remainingAgents.map((agent) => (
+                            <div key={agent.id} className="flex items-center gap-4 pb-4 last:pb-0 border-b border-[#EDF1F7] last:border-0 last:mb-0">
+                                <div className="w-[48px] h-[48px] rounded-full overflow-hidden bg-gray-100 shrink-0">
+                                    {agent.photoUrl ? (
+                                        <img src={agent.photoUrl} alt={agent.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm font-bold">
+                                            {agent.name.charAt(0)}
+                                        </div>
+                                    )}
                                 </div>
-                                <CircularProgress
-                                    value={agent.totalDeals}
-                                    color={index === 0 ? '#06B6D4' : index === 1 ? '#10B981' : '#8B5CF6'}
-                                />
+                                <div>
+                                    <h4 className="text-[15px] font-bold text-[#1A1A1A] leading-tight">{agent.name}</h4>
+                                    <p className="text-[#94A3B8] text-[12px] font-normal mt-0.5">{agent.position}</p>
+                                </div>
                             </div>
                         ))
                     )}

@@ -1,5 +1,7 @@
 import api from '../api/axios';
 
+import { OffPlanProperty } from './off-plan-property.service';
+
 export interface Developer {
     id: string;
     name: string;
@@ -18,6 +20,7 @@ export interface Developer {
     _count?: {
         properties: number;
     };
+    properties?: OffPlanProperty[];
 }
 
 export interface CreateDeveloperDto {

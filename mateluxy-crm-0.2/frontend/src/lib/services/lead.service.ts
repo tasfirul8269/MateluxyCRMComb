@@ -45,5 +45,15 @@ export const LeadService = {
         const response = await api.get('/leads/stats');
         return response.data;
     },
+    getLeadSourceStats: async () => {
+        const response = await api.get<{
+            facebook: number;
+            instagram: number;
+            tiktok: number;
+            mateluxy: number;
+            total: number;
+        }>('/leads/source-stats');
+        return response.data;
+    },
 };
 

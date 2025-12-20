@@ -8,6 +8,7 @@ export interface OffPlanProperty {
         id: string;
         name: string;
         logoUrl?: string;
+        salesManagerPhone?: string;
     };
 
     // Specific Details
@@ -90,15 +91,15 @@ export interface CreateOffPlanPropertyDto {
     developerId: string;
 
     // Specific Details
-    emirate: string;
-    launchType: string;
-    projectHighlight: string;
-    propertyType: string[];
+    emirate?: string;
+    launchType?: string;
+    projectHighlight?: string;
+    propertyType?: string[];
     plotArea?: number;
-    area: number;
-    bedrooms: number;
+    area?: number;
+    bedrooms?: number;
     kitchens?: number;
-    bathrooms: number;
+    bathrooms?: number;
 
     // Locations
     address?: string;

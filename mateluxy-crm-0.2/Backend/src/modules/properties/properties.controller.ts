@@ -24,6 +24,22 @@ export class PropertiesController {
         return this.propertiesService.getDashboardStats();
     }
 
+    @Get('revenue-tendency')
+    async getRevenueTendency() {
+        return this.propertiesService.getRevenueTendency();
+    }
+
+    @Get('category-tendency')
+    async getCategoryTendency() {
+        return this.propertiesService.getCategoryTendency();
+    }
+
+    @Get('top-locations')
+    async getTopLocations(@Query('viewBy') viewBy: 'listing' | 'impression' | 'leads') {
+        return this.propertiesService.getTopLocations(viewBy);
+    }
+
+
     @Get('pf-locations')
     async searchPfLocations(@Query('search') search: string) {
         return this.propertiesService.searchPfLocations(search);
@@ -76,6 +92,8 @@ export class PropertiesController {
             limit: query.limit ? Number(query.limit) : undefined,
         });
     }
+
+
 
     @Get(':id')
     findOne(@Param('id') id: string) {
@@ -299,4 +317,5 @@ export class PropertiesController {
     fetchMissingLocationPaths() {
         return this.propertiesService.fetchMissingLocationPaths();
     }
+
 }

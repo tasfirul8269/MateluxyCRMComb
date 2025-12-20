@@ -1,5 +1,7 @@
 import React from 'react';
-import { Facebook, Instagram, Globe } from 'lucide-react';
+import Image from 'next/image';
+import { useQuery } from '@tanstack/react-query';
+import { LeadService } from '@/lib/services/lead.service';
 
 function LeadBar({
     icon,
@@ -12,62 +14,93 @@ function LeadBar({
     value: number;
     max: number;
 }) {
-    const percentage = (value / max) * 100;
+    const percentage = max > 0 ? (value / max) * 100 : 0;
 
     return (
-        <div className="flex items-center gap-5 mb-5 last:mb-0">
-            <div className="w-6 flex justify-center shrink-0">
+        <div className="flex items-center gap-4 mb-4 last:mb-0">
+            <div className="w-8 h-8 shrink-0 flex items-center justify-center">
                 {icon}
             </div>
             <div className="flex-1">
-                <div className="h-4 w-full bg-[#F1F5F9] rounded-full overflow-hidden">
+                <div className="h-2 w-full bg-[#F1F5F9] rounded-full overflow-hidden">
                     <div
                         className="h-full rounded-full transition-all duration-500 ease-out"
                         style={{ width: `${percentage}%`, backgroundColor: color }}
                     />
                 </div>
             </div>
-            <span className="text-[14px] font-bold text-[#1A1A1A] w-12 text-right">{value}</span>
+            <span className="text-[14px] font-bold text-[#1A1A1A] w-10 text-right">{value}</span>
         </div>
     );
 }
 
 export function LeadStats() {
+    const { data, isLoading } = useQuery({
+        queryKey: ['leadSourceStats'],
+        queryFn: LeadService.getLeadSourceStats,
+    });
+
+    if (isLoading) {
+        return (
+            <div className="bg-white p-5 rounded-[20px] border border-[#EDF1F7] animate-pulse">
+                <div className="h-6 w-24 bg-gray-200 rounded mb-4"></div>
+                <div className="space-y-4">
+                    {[1, 2, 3, 4].map(i => (
+                        <div key={i} className="flex gap-4 items-center">
+                            <div className="w-8 h-8 rounded-full bg-gray-200"></div>
+                            <div className="flex-1 h-2 bg-gray-100 rounded-full"></div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    const stats = data || {
+        facebook: 0,
+        instagram: 0,
+        tiktok: 0,
+        mateluxy: 0,
+    };
+
+    const maxValue = Math.max(
+        stats.facebook || 0,
+        stats.instagram || 0,
+        stats.tiktok || 0,
+        stats.mateluxy || 0,
+        100 // Minimum scale to avoid div by zero
+    );
+
+    // Add 20% buffer to max value so bars aren't always 100% full
+    const displayMax = maxValue * 1.2;
+
     return (
-        <div className="bg-white p-6 rounded-[20px] border border-[#EDF1F7]">
-            <h3 className="text-[#8F9BB3] text-sm font-medium mb-6">Leads</h3>
-            <div className="space-y-2">
+        <div className="bg-white p-5 rounded-[20px] border border-[#EDF1F7]">
+            <h3 className="text-[#8F9BB3] text-[16px] font-medium mb-4">Leads</h3>
+            <div className="space-y-1">
                 <LeadBar
-                    icon={<Facebook className="w-6 h-6 text-[#1877F2] fill-current" />}
+                    icon={<Image src="/facebook_icon.svg" alt="Facebook" width={32} height={32} />}
                     color="#1877F2"
-                    value={1202}
-                    max={1500}
+                    value={stats.facebook || 0}
+                    max={displayMax}
                 />
                 <LeadBar
-                    icon={<Instagram className="w-6 h-6 text-[#E1306C]" />}
-                    color="#E1306C" // Using solid color for progress bar to match clean design
-                    value={601}
-                    max={1500}
+                    icon={<Image src="/instagram_icon.svg" alt="Instagram" width={32} height={32} />}
+                    color="#E1306C"
+                    value={stats.instagram || 0}
+                    max={displayMax}
                 />
                 <LeadBar
-                    icon={
-                        <svg className="w-6 h-6 text-black fill-current" viewBox="0 0 24 24">
-                            <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
-                        </svg>
-                    }
+                    icon={<Image src="/tiktok_icon.svg" alt="TikTok" width={32} height={32} />}
                     color="#000000"
-                    value={892}
-                    max={1500}
+                    value={stats.tiktok || 0}
+                    max={displayMax}
                 />
                 <LeadBar
-                    // Using a Generic Red Icon for the last one (Website/Other)
-                    // Currently reusing Globe but making it Red
-                    icon={<div className="w-6 h-6 rounded-full border-2 border-[#EF4444] flex items-center justify-center text-[#EF4444] font-bold text-[10px]">
-                        Web
-                    </div>}
-                    color="#EF4444"
-                    value={765}
-                    max={1500}
+                    icon={<Image src="/svg/mateluxy_icon.svg" alt="Mateluxy" width={32} height={32} className="rounded-full" />}
+                    color="#FF0000"
+                    value={stats.mateluxy || 0}
+                    max={displayMax}
                 />
             </div>
         </div>

@@ -1,33 +1,38 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Loader2 } from 'lucide-react';
+import api from '@/lib/api/axios';
 
-const data = [
-    { name: 'Jan', residential: 20, commercial: 100 },
-    { name: 'Feb', residential: 120, commercial: 80 },
-    { name: 'Mar', residential: 90, commercial: 160 },
-    { name: 'Apr', residential: 200, commercial: 130 },
-    { name: 'May', residential: 140, commercial: 180 },
-];
+interface CategoryData {
+    name: string;
+    residential: number;
+    commercial: number;
+}
 
-const data2 = [
-    { name: 'Jan', residential: 20, commercial: 120 },
-    { name: 'Feb', residential: 140, commercial: 60 },
-    { name: 'Mar', residential: 100, commercial: 150 },
-    { name: 'Apr', residential: 220, commercial: 180 },
-    { name: 'May', residential: 180, commercial: 210 },
-];
+interface CategoryTendencyResponse {
+    forBuy: CategoryData[];
+    forRent: CategoryData[];
+}
 
 interface CategoryChartProps {
     title: string;
-    data: any[];
+    data: CategoryData[];
+    isLoading: boolean;
 }
 
-function CategoryChart({ title, data }: CategoryChartProps) {
+function CategoryChart({ title, data, isLoading }: CategoryChartProps) {
     const [showResidential, setShowResidential] = useState(true);
     const [showCommercial, setShowCommercial] = useState(true);
+
+    // Calculate max value for Y axis
+    const maxValue = Math.max(
+        ...data.map(d => Math.max(d.residential, d.commercial)),
+        10 // Minimum of 10 to avoid empty chart
+    );
+    const yAxisMax = Math.ceil(maxValue / 10) * 10 + 10;
 
     return (
         <div className="bg-white p-6 rounded-[20px] border border-[#EDF1F7] flex-1">
@@ -66,65 +71,104 @@ function CategoryChart({ title, data }: CategoryChartProps) {
             </div>
 
             <div className="h-[200px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                        data={data}
-                        margin={{
-                            top: 5,
-                            right: 10,
-                            left: -20,
-                            bottom: 0,
-                        }}
-                    >
-                        <CartesianGrid strokeDasharray="3 3" vertical={true} horizontal={true} stroke="#EDF1F7" />
-                        <XAxis
-                            dataKey="name"
-                            axisLine={false}
-                            tickLine={false}
-                            tick={{ fill: '#8F9BB3', fontSize: 12 }}
-                            dy={10}
-                        />
-                        <YAxis
-                            axisLine={false}
-                            tickLine={false}
-                            tick={{ fill: '#8F9BB3', fontSize: 12 }}
-                            domain={[0, 300]}
-                            ticks={[0, 60, 120, 180, 240, 300]}
-                        />
-                        <Tooltip />
-                        {showResidential && (
-                            <Line
-                                type="monotone"
-                                dataKey="residential"
-                                stroke="#EF4444"
-                                strokeWidth={3}
-                                dot={{ r: 0 }}
-                                activeDot={{ r: 4 }}
+                {isLoading ? (
+                    <div className="flex items-center justify-center h-full">
+                        <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+                    </div>
+                ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                            data={data}
+                            margin={{
+                                top: 5,
+                                right: 10,
+                                left: -20,
+                                bottom: 0,
+                            }}
+                        >
+                            <CartesianGrid strokeDasharray="3 3" vertical={true} horizontal={true} stroke="#EDF1F7" />
+                            <XAxis
+                                dataKey="name"
+                                axisLine={false}
+                                tickLine={false}
+                                tick={{ fill: '#8F9BB3', fontSize: 12 }}
+                                dy={10}
                             />
-                        )}
-                        {showCommercial && (
-                            <Line
-                                type="monotone"
-                                dataKey="commercial"
-                                stroke="#FFCDD2"
-                                strokeWidth={3}
-                                strokeDasharray="5 5"
-                                dot={{ r: 0 }}
-                                activeDot={{ r: 4 }}
+                            <YAxis
+                                axisLine={false}
+                                tickLine={false}
+                                tick={{ fill: '#8F9BB3', fontSize: 12 }}
+                                domain={[0, yAxisMax]}
                             />
-                        )}
-                    </LineChart>
-                </ResponsiveContainer>
+                            <Tooltip
+                                contentStyle={{
+                                    backgroundColor: 'white',
+                                    border: '1px solid #EDF1F7',
+                                    borderRadius: '8px',
+                                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                                }}
+                            />
+                            {showResidential && (
+                                <Line
+                                    type="monotone"
+                                    dataKey="residential"
+                                    stroke="#EF4444"
+                                    strokeWidth={3}
+                                    dot={{ r: 0 }}
+                                    activeDot={{ r: 4 }}
+                                />
+                            )}
+                            {showCommercial && (
+                                <Line
+                                    type="monotone"
+                                    dataKey="commercial"
+                                    stroke="#FFCDD2"
+                                    strokeWidth={3}
+                                    strokeDasharray="5 5"
+                                    dot={{ r: 0 }}
+                                    activeDot={{ r: 4 }}
+                                />
+                            )}
+                        </LineChart>
+                    </ResponsiveContainer>
+                )}
             </div>
         </div>
     );
 }
 
 export function CategoryCharts() {
+    const [data, setData] = useState<CategoryTendencyResponse | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const response = await api.get<CategoryTendencyResponse>('/properties/category-tendency');
+                setData(response.data);
+            } catch (error) {
+                console.error('Failed to fetch category tendency data:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
+
     return (
         <div className="flex flex-col md:flex-row gap-6 mb-8">
-            <CategoryChart title="For buy" data={data} />
-            <CategoryChart title="For Rent" data={data2} />
+            <CategoryChart
+                title="For Buy"
+                data={data?.forBuy || []}
+                isLoading={isLoading}
+            />
+            <CategoryChart
+                title="For Rent"
+                data={data?.forRent || []}
+                isLoading={isLoading}
+            />
         </div>
     );
 }
+

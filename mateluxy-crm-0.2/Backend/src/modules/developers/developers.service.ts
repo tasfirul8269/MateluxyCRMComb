@@ -70,6 +70,9 @@ export class DevelopersService {
     async findOne(id: string) {
         const developer = await this.prisma.developer.findUnique({
             where: { id },
+            include: {
+                properties: true,
+            },
         });
 
         if (!developer) {

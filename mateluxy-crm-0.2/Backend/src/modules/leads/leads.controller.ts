@@ -19,6 +19,11 @@ export class LeadsController {
         return this.leadsService.getStats();
     }
 
+    @Get('source-stats')
+    getLeadSourceStats() {
+        return this.leadsService.getLeadSourceStats();
+    }
+
 
     @Get()
     findAll() {

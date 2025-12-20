@@ -346,6 +346,217 @@ export class PropertiesService {
         };
     }
 
+    async getRevenueTendency() {
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+
+        // Get data for the past 12 months
+        const sellingData: { name: string; value: number }[] = [];
+        const rentingData: { name: string; value: number }[] = [];
+
+        for (let i = 11; i >= 0; i--) {
+            const targetDate = new Date(currentYear, currentMonth - i, 1);
+            const monthStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
+            const monthEnd = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59);
+            const monthName = months[targetDate.getMonth()];
+
+            // Get sold properties revenue for this month
+            const soldProperties = await this.prisma.property.aggregate({
+                where: {
+                    status: 'SOLD',
+                    updatedAt: {
+                        gte: monthStart,
+                        lte: monthEnd,
+                    },
+                },
+                _sum: {
+                    price: true,
+                },
+            });
+
+            // Get rented properties revenue for this month
+            const rentedProperties = await this.prisma.property.aggregate({
+                where: {
+                    status: 'RENTED',
+                    updatedAt: {
+                        gte: monthStart,
+                        lte: monthEnd,
+                    },
+                },
+                _sum: {
+                    price: true,
+                },
+            });
+
+            sellingData.push({
+                name: monthName,
+                value: Math.round(soldProperties._sum.price || 0),
+            });
+
+            rentingData.push({
+                name: monthName,
+                value: Math.round(rentedProperties._sum.price || 0),
+            });
+        }
+
+        return {
+            selling: sellingData,
+            renting: rentingData,
+        };
+    }
+
+    async getCategoryTendency() {
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth();
+
+        const forBuyData: { name: string; residential: number; commercial: number }[] = [];
+        const forRentData: { name: string; residential: number; commercial: number }[] = [];
+
+        for (let i = 11; i >= 0; i--) {
+            const targetDate = new Date(currentYear, currentMonth - i, 1);
+            const monthStart = new Date(targetDate.getFullYear(), targetDate.getMonth(), 1);
+            const monthEnd = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0, 23, 59, 59);
+            const monthName = months[targetDate.getMonth()];
+
+            // For Buy - Residential
+            const buyResidential = await this.prisma.property.count({
+                where: {
+                    purpose: { in: ['sale', 'Sale', 'SALE', 'buy', 'Buy', 'BUY'] },
+                    category: { equals: 'residential', mode: 'insensitive' },
+                    createdAt: { gte: monthStart, lte: monthEnd },
+                },
+            });
+
+            // For Buy - Commercial
+            const buyCommercial = await this.prisma.property.count({
+                where: {
+                    purpose: { in: ['sale', 'Sale', 'SALE', 'buy', 'Buy', 'BUY'] },
+                    category: { equals: 'commercial', mode: 'insensitive' },
+                    createdAt: { gte: monthStart, lte: monthEnd },
+                },
+            });
+
+            // For Rent - Residential
+            const rentResidential = await this.prisma.property.count({
+                where: {
+                    purpose: { in: ['rent', 'Rent', 'RENT'] },
+                    category: { equals: 'residential', mode: 'insensitive' },
+                    createdAt: { gte: monthStart, lte: monthEnd },
+                },
+            });
+
+            // For Rent - Commercial
+            const rentCommercial = await this.prisma.property.count({
+                where: {
+                    purpose: { in: ['rent', 'Rent', 'RENT'] },
+                    category: { equals: 'commercial', mode: 'insensitive' },
+                    createdAt: { gte: monthStart, lte: monthEnd },
+                },
+            });
+
+            forBuyData.push({
+                name: monthName,
+                residential: buyResidential,
+                commercial: buyCommercial,
+            });
+
+            forRentData.push({
+                name: monthName,
+                residential: rentResidential,
+                commercial: rentCommercial,
+            });
+        }
+
+        return {
+            forBuy: forBuyData,
+            forRent: forRentData,
+        };
+    }
+
+    async getTopLocations(viewBy: 'listing' | 'impression' | 'leads' = 'listing') {
+        const locationStats = new Map<string, { offPlan: number, forRent: number, forSell: number }>();
+
+        const normalizeLocation = (loc: string) => {
+            if (!loc) return null;
+            // Split by > or ,
+            let parts: string[] = [];
+            if (loc.includes('>')) {
+                parts = loc.split('>').map(s => s.trim());
+                // Take the LAST meaningful part that isn't just "Dubai" (usually sub-community)
+                return parts[parts.length - 1].trim();
+            } else {
+                parts = loc.split(',').map(s => s.trim());
+                return parts[0].trim(); // Usually "Community, City" -> take Community
+            }
+        };
+
+        const addStat = (location: string | null, type: 'offPlan' | 'forRent' | 'forSell') => {
+            if (!location) return;
+
+            let distinctLoc = normalizeLocation(location);
+
+            if (!distinctLoc) return;
+            // Clean up common cleanups
+            distinctLoc = distinctLoc.replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase())));
+
+            if (['Dubai', 'Uae', 'Abu Dhabi', 'Sharjah'].includes(distinctLoc)) return; // Skip generic
+
+            const current = locationStats.get(distinctLoc) || { offPlan: 0, forRent: 0, forSell: 0 };
+            current[type]++;
+            locationStats.set(distinctLoc, current);
+        };
+
+        if (viewBy === 'leads') {
+            const leads = await this.prisma.lead.findMany({
+                where: { isActive: true },
+                select: { district: true, areaFrom: true, areaTo: true }
+            });
+
+            for (const lead of leads) {
+                if (lead.district) addStat(lead.district, 'forSell');
+                if (lead.areaFrom) addStat(lead.areaFrom, 'forSell');
+                if (lead.areaTo) addStat(lead.areaTo, 'forSell');
+            }
+
+        } else if (viewBy === 'impression') {
+            // Placeholder
+        } else {
+            // By Listing
+            const offPlanProps = await this.prisma.offPlanProperty.findMany({
+                select: { address: true, emirate: true }
+            });
+            for (const p of offPlanProps) {
+                addStat(p.address || p.emirate, 'offPlan');
+            }
+
+            const activeProps = await this.prisma.property.findMany({
+                where: { isActive: true, status: 'AVAILABLE' },
+                select: { pfLocationPath: true, address: true, purpose: true, emirate: true }
+            });
+
+            for (const p of activeProps) {
+                const loc = p.pfLocationPath || p.address || p.emirate;
+                const type = (p.purpose && p.purpose.toLowerCase().includes('rent')) ? 'forRent' : 'forSell';
+                addStat(loc, type);
+            }
+        }
+
+        // Convert Map to array and Sort by TOTAL desc initially
+        const result = Array.from(locationStats.entries()).map(([name, stats]) => ({
+            name,
+            ...stats,
+            total: stats.offPlan + stats.forRent + stats.forSell
+        }));
+
+        // Return top 50 to allow frontend to re-sort filtering
+        return result.sort((a, b) => b.total - a.total).slice(0, 50);
+    }
+
+
     async findOne(id: string) {
         const property = await this.prisma.property.findUnique({
             where: { id },
@@ -1084,14 +1295,6 @@ export class PropertiesService {
             }
 
             for (const pfListing of listings) {
-                // DEBUG: Inspect status fields for first listing
-                if (syncedCount === 0) {
-                    this.logger.warn(`[PF SYNC DEBUG] Listing ID: ${pfListing.id}`);
-                    this.logger.warn(`[PF SYNC DEBUG] Status: ${pfListing.status}`);
-                    this.logger.warn(`[PF SYNC DEBUG] Verification: ${pfListing.verificationStatus}`);
-                    this.logger.warn(`[PF SYNC DEBUG] Lifecycle: ${pfListing.lifecycleStatus}`);
-                    this.logger.warn(`[PF SYNC DEBUG] Full Keys: ${Object.keys(pfListing).join(', ')}`);
-                }
                 // Price handling
                 // Property Finder uses 'sale' for sales, and 'yearly'/'monthly' for rentals
                 let priceValue = 0;
@@ -1192,6 +1395,13 @@ export class PropertiesService {
                 const priceType = pfListing.price?.type?.toLowerCase() || 'sale';
                 const isRental = priceType === 'rent' || priceType === 'yearly' || priceType === 'monthly';
 
+                // Check published status from multiple possible fields
+                const isPublished =
+                    pfListing.portals?.propertyfinder?.isLive === true ||
+                    pfListing.state?.stage === 'live' ||
+                    pfListing.state?.type === 'live' ||
+                    ['published', 'live', 'listed'].includes(pfListing.status?.toLowerCase());
+
                 const propertyData: any = {
                     // Basic info
                     category: pfListing.category || 'residential',
@@ -1239,7 +1449,7 @@ export class PropertiesService {
 
                     // PF Integration Fields
                     pfListingId: String(pfListing.id),
-                    pfPublished: (pfListing.status?.toLowerCase() === 'published' || pfListing.status?.toLowerCase() === 'live'),
+                    pfPublished: isPublished,
                     pfVerificationStatus: pfListing.verificationStatus || null,
                     pfQualityScore: pfListing.qualityScore?.value ? parseFloat(pfListing.qualityScore.value) : null,
                     pfSyncedAt: new Date(),
@@ -1579,6 +1789,8 @@ export class PropertiesService {
             }
         };
     }
+
+
 
     /**
      * Calculate local quality score details

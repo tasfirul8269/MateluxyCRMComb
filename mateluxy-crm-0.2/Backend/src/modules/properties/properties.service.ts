@@ -508,82 +508,96 @@ export class PropertiesService {
     }
 
     async getTopLocations(viewBy: 'listing' | 'impression' | 'leads' = 'listing') {
-        const locationStats = new Map<string, { offPlan: number, forRent: number, forSell: number }>();
+        this.logger.log(`getTopLocations called with viewBy: ${viewBy}`);
+        try {
+            const locationStats = new Map<string, { offPlan: number, forRent: number, forSell: number }>();
 
-        const normalizeLocation = (loc: string) => {
-            if (!loc) return null;
-            // Split by > or ,
-            let parts: string[] = [];
-            if (loc.includes('>')) {
-                parts = loc.split('>').map(s => s.trim());
-                // Take the LAST meaningful part that isn't just "Dubai" (usually sub-community)
-                return parts[parts.length - 1].trim();
+            const normalizeLocation = (loc: string) => {
+                if (!loc) return null;
+                // Split by > or ,
+                let parts: string[] = [];
+                if (loc.includes('>')) {
+                    parts = loc.split('>').map(s => s.trim());
+                    // Take the LAST meaningful part that isn't just "Dubai" (usually sub-community)
+                    return parts[parts.length - 1].trim();
+                } else {
+                    parts = loc.split(',').map(s => s.trim());
+                    return parts[0].trim(); // Usually "Community, City" -> take Community
+                }
+            };
+
+            const addStat = (location: string | null, type: 'offPlan' | 'forRent' | 'forSell') => {
+                if (!location) return;
+
+                let distinctLoc = normalizeLocation(location);
+
+                if (!distinctLoc) return;
+                // Clean up common cleanups
+                distinctLoc = distinctLoc.replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase())));
+
+                if (['Dubai', 'Uae', 'Abu Dhabi', 'Sharjah'].includes(distinctLoc)) return; // Skip generic
+
+                const current = locationStats.get(distinctLoc) || { offPlan: 0, forRent: 0, forSell: 0 };
+                current[type]++;
+                locationStats.set(distinctLoc, current);
+            };
+
+            if (viewBy === 'leads') {
+                this.logger.log('Fetching leads for top locations');
+                const leads = await this.prisma.lead.findMany({
+                    where: { isActive: true },
+                    select: { district: true, areaFrom: true, areaTo: true }
+                });
+                this.logger.log(`Found ${leads.length} leads`);
+
+                for (const lead of leads) {
+                    if (lead.district) addStat(lead.district, 'forSell');
+                    if (lead.areaFrom) addStat(lead.areaFrom, 'forSell');
+                    if (lead.areaTo) addStat(lead.areaTo, 'forSell');
+                }
+
+            } else if (viewBy === 'impression') {
+                // Placeholder
+                this.logger.log('ViewBy impression not implemented');
             } else {
-                parts = loc.split(',').map(s => s.trim());
-                return parts[0].trim(); // Usually "Community, City" -> take Community
-            }
-        };
+                // By Listing
+                this.logger.log('Fetching offPlan properties');
+                const offPlanProps = await this.prisma.offPlanProperty.findMany({
+                    select: { address: true, emirate: true }
+                });
+                this.logger.log(`Found ${offPlanProps.length} offPlan properties`);
+                for (const p of offPlanProps) {
+                    addStat(p.address || p.emirate, 'offPlan');
+                }
 
-        const addStat = (location: string | null, type: 'offPlan' | 'forRent' | 'forSell') => {
-            if (!location) return;
+                this.logger.log('Fetching active properties');
+                const activeProps = await this.prisma.property.findMany({
+                    where: { isActive: true, status: 'AVAILABLE' },
+                    select: { pfLocationPath: true, address: true, purpose: true, emirate: true }
+                });
+                this.logger.log(`Found ${activeProps.length} active properties`);
 
-            let distinctLoc = normalizeLocation(location);
-
-            if (!distinctLoc) return;
-            // Clean up common cleanups
-            distinctLoc = distinctLoc.replace(/\w\S*/g, (w) => (w.replace(/^\w/, (c) => c.toUpperCase())));
-
-            if (['Dubai', 'Uae', 'Abu Dhabi', 'Sharjah'].includes(distinctLoc)) return; // Skip generic
-
-            const current = locationStats.get(distinctLoc) || { offPlan: 0, forRent: 0, forSell: 0 };
-            current[type]++;
-            locationStats.set(distinctLoc, current);
-        };
-
-        if (viewBy === 'leads') {
-            const leads = await this.prisma.lead.findMany({
-                where: { isActive: true },
-                select: { district: true, areaFrom: true, areaTo: true }
-            });
-
-            for (const lead of leads) {
-                if (lead.district) addStat(lead.district, 'forSell');
-                if (lead.areaFrom) addStat(lead.areaFrom, 'forSell');
-                if (lead.areaTo) addStat(lead.areaTo, 'forSell');
+                for (const p of activeProps) {
+                    const loc = p.pfLocationPath || p.address || p.emirate;
+                    const type = (p.purpose && p.purpose.toLowerCase().includes('rent')) ? 'forRent' : 'forSell';
+                    addStat(loc, type);
+                }
             }
 
-        } else if (viewBy === 'impression') {
-            // Placeholder
-        } else {
-            // By Listing
-            const offPlanProps = await this.prisma.offPlanProperty.findMany({
-                select: { address: true, emirate: true }
-            });
-            for (const p of offPlanProps) {
-                addStat(p.address || p.emirate, 'offPlan');
-            }
+            // Convert Map to array and Sort by TOTAL desc initially
+            const result = Array.from(locationStats.entries()).map(([name, stats]) => ({
+                name,
+                ...stats,
+                total: stats.offPlan + stats.forRent + stats.forSell
+            }));
 
-            const activeProps = await this.prisma.property.findMany({
-                where: { isActive: true, status: 'AVAILABLE' },
-                select: { pfLocationPath: true, address: true, purpose: true, emirate: true }
-            });
-
-            for (const p of activeProps) {
-                const loc = p.pfLocationPath || p.address || p.emirate;
-                const type = (p.purpose && p.purpose.toLowerCase().includes('rent')) ? 'forRent' : 'forSell';
-                addStat(loc, type);
-            }
+            // Return top 50 to allow frontend to re-sort filtering
+            this.logger.log(`Returning ${result.length} locations`);
+            return result.sort((a, b) => b.total - a.total).slice(0, 50);
+        } catch (error) {
+            this.logger.error('Error in getTopLocations', error);
+            throw error;
         }
-
-        // Convert Map to array and Sort by TOTAL desc initially
-        const result = Array.from(locationStats.entries()).map(([name, stats]) => ({
-            name,
-            ...stats,
-            total: stats.offPlan + stats.forRent + stats.forSell
-        }));
-
-        // Return top 50 to allow frontend to re-sort filtering
-        return result.sort((a, b) => b.total - a.total).slice(0, 50);
     }
 
 

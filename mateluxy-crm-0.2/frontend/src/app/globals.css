@@ -399,3 +399,21 @@ a[href^="https://maps.google.com/maps"] {
     font-weight: 600;
     color: #1f2837;
 }
+
+@keyframes jiggle {
+    0% {
+        transform: rotate(-3deg);
+    }
+
+    50% {
+        transform: rotate(3deg);
+    }
+
+    100% {
+        transform: rotate(-3deg);
+    }
+}
+
+.animate-jiggle {
+    animation: jiggle 0.3s ease-in-out infinite;
+}

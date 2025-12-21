@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { ClientDetailsTab } from '@/components/properties/tabs/client-details-tab';
 import { SpecificDetailsTab } from '@/components/properties/tabs/specific-details-tab';
@@ -11,11 +11,13 @@ import { GeneralDetailsTab } from '@/components/properties/tabs/general-details-
 import { MediaTab } from '@/components/properties/tabs/media-tab';
 import { AdditionalTab } from '@/components/properties/tabs/additional-tab';
 import { AgentTab } from '@/components/properties/tabs/agent-tab';
+import { SubmissionOverlay } from '@/components/ui/submission-overlay';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useCreateProperty, useUpdateProperty } from '@/hooks/use-properties';
 import { CreatePropertyData } from '@/services/property.service';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 interface PropertyFormStepProps {
     nocFile: File | null;
@@ -24,6 +26,47 @@ interface PropertyFormStepProps {
     initialData?: any;
     onBack: () => void;
 }
+
+// Define a type for form values if not already defined
+type PropertyFormValues = CreatePropertyData & {
+    clientName: string;
+    nationality: string;
+    phoneNumber: string;
+    phoneCountry: string;
+    emirate: string;
+    propertyType: string;
+    plotArea?: number;
+    area?: number;
+    bedrooms?: number;
+    kitchens?: number;
+    bathrooms?: number;
+    unitNumber: string;
+    ownershipStatus: string;
+    parkingSpaces?: number;
+    address: string;
+    latitude?: number;
+    longitude?: number;
+    furnishingType: string;
+    pfLocationId?: string;
+    pfLocationPath?: string;
+    price?: number;
+    rentalPeriod: string;
+    brokerFee?: number;
+    numberOfCheques?: number;
+    dldPermitNumber: string;
+    dldQrCode: string;
+    propertyTitle: string;
+    propertyDescription: string;
+    coverPhoto: File | string | FileList;
+    videoUrl: string;
+    mediaImages: (File | string)[];
+    reference: string;
+    availableFrom: string;
+    amenities: string[];
+    assignedAgentId: string;
+    isActive?: boolean;
+    pfPublished?: boolean;
+};
 
 const TABS = [
     { id: 'client', label: 'Client Details' },
@@ -52,6 +95,11 @@ export function PropertyFormStep({ nocFile: initialNocFile, category: initialCat
     const updatePropertyMutation = useUpdateProperty();
     const isEditing = !!initialData;
 
+    const cancelClickedRef = React.useRef(false);
+    const hasUnsavedChangesRef = React.useRef(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const router = useRouter();
+
     const {
         register,
         control,
@@ -59,8 +107,9 @@ export function PropertyFormStep({ nocFile: initialNocFile, category: initialCat
         handleSubmit,
         watch,
         setValue,
-        getValues
-    } = useForm({
+        getValues,
+        reset
+    } = useForm<PropertyFormValues>({
         defaultValues: {
             // Client Details
             clientName: initialData?.clientName || '',
@@ -88,8 +137,8 @@ export function PropertyFormStep({ nocFile: initialNocFile, category: initialCat
             // Price
             price: initialData?.price,
             rentalPeriod: initialData?.rentalPeriod || '',
-            brokerFee: initialData?.brokerFee || '',
-            numberOfCheques: initialData?.numberOfCheques || '',
+            brokerFee: initialData?.brokerFee,
+            numberOfCheques: initialData?.numberOfCheques,
             // DLD
             dldPermitNumber: initialData?.dldPermitNumber || '',
             dldQrCode: initialData?.dldQrCode || '',
@@ -109,20 +158,77 @@ export function PropertyFormStep({ nocFile: initialNocFile, category: initialCat
         }
     });
 
+    // Reset form when initialData changes
+    useEffect(() => {
+        if (initialData) {
+            reset({
+                // Client Details
+                clientName: initialData.clientName || '',
+                nationality: initialData.nationality || '',
+                phoneNumber: initialData.phoneNumber || '',
+                phoneCountry: initialData.phoneCountry || 'AE',
+                // Specific Details
+                emirate: initialData.emirate || '',
+                propertyType: initialData.propertyType || '',
+                plotArea: initialData.plotArea,
+                area: initialData.area,
+                bedrooms: initialData.bedrooms,
+                kitchens: initialData.kitchens,
+                bathrooms: initialData.bathrooms,
+                unitNumber: initialData.unitNumber || '',
+                ownershipStatus: initialData.ownershipStatus || '',
+                parkingSpaces: initialData.parkingSpaces || '',
+                // Locations
+                address: initialData.address || '',
+                latitude: initialData.latitude,
+                longitude: initialData.longitude,
+                furnishingType: initialData.furnishingType ? (initialData.furnishingType.charAt(0).toUpperCase() + initialData.furnishingType.slice(1).toLowerCase()) : '',
+                pfLocationId: initialData.pfLocationId,
+                pfLocationPath: initialData.pfLocationPath,
+                // Price
+                price: initialData.price,
+                rentalPeriod: initialData.rentalPeriod || '',
+                brokerFee: initialData.brokerFee,
+                numberOfCheques: initialData.numberOfCheques,
+                // DLD
+                dldPermitNumber: initialData.dldPermitNumber || '',
+                dldQrCode: initialData.dldQrCode || '',
+                // General Details
+                propertyTitle: initialData.propertyTitle || '',
+                propertyDescription: initialData.propertyDescription || '',
+                // Media
+                coverPhoto: initialData.coverPhoto || '',
+                videoUrl: initialData.videoUrl || '',
+                mediaImages: initialData.mediaImages || [],
+                // Additional
+                reference: initialData.reference || '',
+                availableFrom: initialData.availableFrom || '',
+                amenities: initialData.amenities || [],
+                // Agent
+                assignedAgentId: initialData.assignedAgentId || '',
+            });
+
+            // Update local file states
+            setNocFile(initialData.nocDocument || null);
+            setPassportFile(initialData.passportCopy || null);
+            setEmiratesIdFile(initialData.emiratesIdScan || null);
+            setTitleDeedFile(initialData.titleDeed || null);
+        }
+    }, [initialData, reset]);
+
     console.log('PropertyFormStep initialData:', {
         id: initialData?.id,
         pfLocationId: initialData?.pfLocationId,
         pfLocationPath: initialData?.pfLocationPath
     });
 
-    const onSubmit = async (data: any) => {
+    const _submitPropertyData = async (data: PropertyFormValues) => {
         try {
             // Prepare data for submission
             const propertyData: CreatePropertyData = {
+                ...data,
                 category,
                 purpose,
-
-                ...data,
                 nocDocument: nocFile || undefined,
                 passportCopy: passportFile || undefined,
                 emiratesIdScan: emiratesIdFile || undefined,
@@ -140,8 +246,8 @@ export function PropertyFormStep({ nocFile: initialNocFile, category: initialCat
             };
 
             // If coverPhoto is a FileList or similar, extract the File
-            if (data.coverPhoto && data.coverPhoto[0] instanceof File) {
-                propertyData.coverPhoto = data.coverPhoto[0];
+            if (data.coverPhoto && (data.coverPhoto as FileList)[0] instanceof File) {
+                propertyData.coverPhoto = (data.coverPhoto as FileList)[0];
             } else if (data.coverPhoto instanceof File) {
                 propertyData.coverPhoto = data.coverPhoto;
             }
@@ -161,6 +267,22 @@ export function PropertyFormStep({ nocFile: initialNocFile, category: initialCat
         } catch (error) {
             console.error('Failed to create property:', error);
             toast.error('Failed to create property. Please try again.');
+            throw error; // Re-throw to be caught by handleFormSubmit
+        }
+    };
+
+    const handleFormSubmit = async (data: PropertyFormValues) => {
+        console.log('✅ Form validation passed! Publishing with data:', data);
+        setIsSubmitting(true);
+        try {
+            cancelClickedRef.current = true; // Prevent auto-save
+            hasUnsavedChangesRef.current = false;
+            await _submitPropertyData(data);
+        } catch (error) {
+            console.error('Submission error:', error);
+            setIsSubmitting(false);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -169,12 +291,12 @@ export function PropertyFormStep({ nocFile: initialNocFile, category: initialCat
         if (currentIndex < TABS.length - 1) {
             setActiveTab(TABS[currentIndex + 1].id);
         } else {
-            handleSubmit(onSubmit)();
+            handleSubmit(handleFormSubmit)();
         }
     };
 
     return (
-        <div className="flex flex-col items-center font-[var(--font-outfit)]">
+        <form onSubmit={handleSubmit(handleFormSubmit)} className="flex flex-col items-center font-[var(--font-outfit)]">
             <div className="w-fit flex flex-col gap-8">
                 {/* Tabs Navigation */}
                 <div className="bg-[#F7F7F74F] rounded-[15px] border border-[#EDF1F7] p-[7px] overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -182,6 +304,7 @@ export function PropertyFormStep({ nocFile: initialNocFile, category: initialCat
                         {TABS.map((tab) => (
                             <button
                                 key={tab.id}
+                                type="button" // Important for buttons inside a form that shouldn't submit
                                 onClick={() => setActiveTab(tab.id)}
                                 className={cn(
                                     "px-6 h-[60px] rounded-[10px] font-semibold text-[15px] transition-all whitespace-nowrap",
@@ -287,6 +410,7 @@ export function PropertyFormStep({ nocFile: initialNocFile, category: initialCat
                 {/* Footer Actions */}
                 <div className="flex items-center justify-between pt-4 w-[98%] mx-auto">
                     <Button
+                        type="button" // Important for buttons inside a form that shouldn't submit
                         variant="ghost"
                         onClick={onBack}
                         className="px-8 py-3 text-gray-600 font-medium hover:text-gray-900 transition-colors bg-gray-50 hover:bg-gray-100 rounded-xl h-auto"
@@ -297,19 +421,27 @@ export function PropertyFormStep({ nocFile: initialNocFile, category: initialCat
                         {activeTab === 'agent' && (
                             <>
                                 <Button
-                                    onClick={() => onSubmit({ ...getValues(), isActive: true, pfPublished: false })}
-                                    disabled={createPropertyMutation.isPending || updatePropertyMutation.isPending}
+                                    type="submit"
+                                    onClick={() => {
+                                        setValue('isActive', true, { shouldDirty: true });
+                                        setValue('pfPublished', false, { shouldDirty: true });
+                                    }}
+                                    disabled={createPropertyMutation.isPending || updatePropertyMutation.isPending || isSubmitting}
                                     variant="outline"
                                     className="px-8 py-3 border border-[#E0F2FE] text-[#0BA5EC] hover:bg-[#E0F2FE] hover:text-[#0BA5EC] rounded-xl font-medium transition-colors h-auto disabled:opacity-50"
                                 >
-                                    {(createPropertyMutation.isPending || updatePropertyMutation.isPending) ? (isEditing ? 'Saving...' : 'Saving...') : (isEditing ? 'Save Changes' : 'Save')}
+                                    {(createPropertyMutation.isPending || updatePropertyMutation.isPending || isSubmitting) ? (isEditing ? 'Saving...' : 'Saving...') : (isEditing ? 'Save Changes' : 'Save')}
                                 </Button>
                                 <Button
-                                    onClick={() => onSubmit({ ...getValues(), isActive: true, pfPublished: true })}
-                                    disabled={createPropertyMutation.isPending || updatePropertyMutation.isPending}
+                                    type="submit"
+                                    onClick={() => {
+                                        setValue('isActive', true, { shouldDirty: true });
+                                        setValue('pfPublished', true, { shouldDirty: true });
+                                    }}
+                                    disabled={createPropertyMutation.isPending || updatePropertyMutation.isPending || isSubmitting}
                                     className="px-10 py-3 bg-[#00AAFF] text-white hover:bg-[#0090dd] rounded-xl font-medium transition-colors flex items-center gap-2 h-auto disabled:opacity-50"
                                 >
-                                    {(createPropertyMutation.isPending || updatePropertyMutation.isPending) ? 'Publishing...' : 'Publish to Property Finder'}
+                                    {(createPropertyMutation.isPending || updatePropertyMutation.isPending || isSubmitting) ? 'Publishing...' : 'Publish to Property Finder'}
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                     </svg>
@@ -318,8 +450,9 @@ export function PropertyFormStep({ nocFile: initialNocFile, category: initialCat
                         )}
                         {activeTab !== 'agent' && (
                             <Button
+                                type="button" // Important for buttons inside a form that shouldn't submit
                                 onClick={handleNext}
-                                disabled={createPropertyMutation.isPending || updatePropertyMutation.isPending}
+                                disabled={createPropertyMutation.isPending || updatePropertyMutation.isPending || isSubmitting}
                                 className="px-10 py-3 bg-[#E0F2FE] text-[#0BA5EC] hover:bg-[#BAE6FD] rounded-xl font-medium transition-colors flex items-center gap-2 h-auto disabled:opacity-50"
                             >
                                 Next
@@ -331,6 +464,7 @@ export function PropertyFormStep({ nocFile: initialNocFile, category: initialCat
                     </div>
                 </div>
             </div>
-        </div>
+            <SubmissionOverlay isOpen={isSubmitting} message="Publishing Property..." />
+        </form>
     );
 }

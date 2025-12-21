@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Image as ImageIcon, X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useUpload } from '@/hooks/use-upload';
+import { toast } from 'sonner';
 
 interface MediaTabProps {
     register: UseFormRegister<any>;
@@ -14,6 +16,7 @@ interface MediaTabProps {
 }
 
 export function MediaTab({ register, setValue, watch }: MediaTabProps) {
+    const { uploadFile, isUploading } = useUpload();
     const [coverPhoto, setCoverPhoto] = useState<string | null>(watch('coverPhoto') || null);
     const [exteriorMedia, setExteriorMedia] = useState<string[]>(watch('exteriorMedia') || []);
     const [interiorMedia, setInteriorMedia] = useState<string[]>(watch('interiorMedia') || []);
@@ -21,65 +24,69 @@ export function MediaTab({ register, setValue, watch }: MediaTabProps) {
     const [draggedSection, setDraggedSection] = useState<'exterior' | 'interior' | null>(null);
 
     // Cover photo upload
-    const handleCoverPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleCoverPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const result = reader.result as string;
-                setCoverPhoto(result);
-                setValue('coverPhoto', result);
-            };
-            reader.readAsDataURL(file);
+            const uploadedUrl = await uploadFile(file);
+            if (uploadedUrl) {
+                setCoverPhoto(uploadedUrl);
+                setValue('coverPhoto', uploadedUrl);
+                toast.success('Cover photo uploaded successfully');
+            }
         }
     };
 
-    const handleCoverPhotoDrop = (e: React.DragEvent) => {
+    const handleCoverPhotoDrop = async (e: React.DragEvent) => {
         e.preventDefault();
         const file = e.dataTransfer.files?.[0];
         if (file && file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const result = reader.result as string;
-                setCoverPhoto(result);
-                setValue('coverPhoto', result);
-            };
-            reader.readAsDataURL(file);
+            const uploadedUrl = await uploadFile(file);
+            if (uploadedUrl) {
+                setCoverPhoto(uploadedUrl);
+                setValue('coverPhoto', uploadedUrl);
+                toast.success('Cover photo uploaded successfully');
+            }
         }
     };
 
     // Exterior media
-    const handleExteriorMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleExteriorMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
-        files.forEach(file => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const result = reader.result as string;
+
+        for (const file of files) {
+            const uploadedUrl = await uploadFile(file);
+            if (uploadedUrl) {
                 setExteriorMedia(prev => {
-                    const updated = [...prev, result];
+                    const updated = [...prev, uploadedUrl];
                     setValue('exteriorMedia', updated);
                     return updated;
                 });
-            };
-            reader.readAsDataURL(file);
-        });
+            }
+        }
+
+        if (files.length > 0) {
+            toast.success('Exterior media uploaded successfully');
+        }
     };
 
     // Interior media
-    const handleInteriorMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInteriorMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
-        files.forEach(file => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const result = reader.result as string;
+
+        for (const file of files) {
+            const uploadedUrl = await uploadFile(file);
+            if (uploadedUrl) {
                 setInteriorMedia(prev => {
-                    const updated = [...prev, result];
+                    const updated = [...prev, uploadedUrl];
                     setValue('interiorMedia', updated);
                     return updated;
                 });
-            };
-            reader.readAsDataURL(file);
-        });
+            }
+        }
+
+        if (files.length > 0) {
+            toast.success('Interior media uploaded successfully');
+        }
     };
 
     // Drag and drop for reordering

@@ -267,3 +267,135 @@ a[href^="https://maps.google.com/maps"] {
 .gm-style-mtc {
     display: none !important;
 }
+
+/* React Day Picker v9 Styles */
+.rdp-root {
+    --rdp-accent-color: #0aa5ff;
+    --rdp-background-color: #f0f7ff;
+    --rdp-accent-background-color: #e0f2fe;
+    --rdp-day-height: 36px;
+    --rdp-day-width: 36px;
+}
+
+.rdp-month_grid {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.rdp-weekdays {
+    display: flex;
+    margin-bottom: 8px;
+}
+
+.rdp-weekday {
+    width: var(--rdp-day-width);
+    padding: 4px 0;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 500;
+    color: #8b97a8;
+}
+
+.rdp-weeks {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.rdp-week {
+    display: flex;
+}
+
+.rdp-day {
+    width: var(--rdp-day-width);
+    height: var(--rdp-day-height);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rdp-day_button {
+    width: 32px;
+    height: 32px;
+    border-radius: 9999px;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    color: #1f2837;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.rdp-day_button:hover {
+    background-color: var(--rdp-background-color);
+    color: var(--rdp-accent-color);
+}
+
+.rdp-selected .rdp-day_button {
+    background-color: var(--rdp-accent-color);
+    color: white;
+}
+
+.rdp-selected .rdp-day_button:hover {
+    background-color: var(--rdp-accent-color);
+    color: white;
+}
+
+.rdp-today .rdp-day_button {
+    background-color: var(--rdp-background-color);
+    color: var(--rdp-accent-color);
+    font-weight: 600;
+}
+
+.rdp-outside .rdp-day_button {
+    color: #c7ced9;
+    opacity: 0.5;
+}
+
+.rdp-disabled .rdp-day_button {
+    color: #c7ced9;
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.rdp-nav {
+    position: absolute;
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    left: 0;
+    padding: 0 4px;
+}
+
+.rdp-button_previous,
+.rdp-button_next {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: 1px solid #e5ecf5;
+    background: white;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.rdp-button_previous:hover,
+.rdp-button_next:hover {
+    background-color: #f8fafc;
+}
+
+.rdp-month_caption {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 40px;
+    position: relative;
+}
+
+.rdp-caption_label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2837;
+}

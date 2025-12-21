@@ -8,6 +8,8 @@ import { DocumentUploadBox } from '../document-upload-box';
 import { CountryCodeSelect } from '@/components/ui/country-code-select';
 import { FileText, CreditCard, UserSquare2, FileBadge } from 'lucide-react';
 import { CountryCode } from 'libphonenumber-js';
+import Select from 'react-select';
+import countryList from 'react-select-country-list';
 
 interface ClientDetailsTabProps {
     register: UseFormRegister<any>;
@@ -65,11 +67,55 @@ export function ClientDetailsTab({
                     <Label htmlFor="nationality" className="text-[15px] font-medium text-gray-700">
                         Nationality <span className="text-red-500">*</span>
                     </Label>
-                    <Input
-                        id="nationality"
-                        placeholder="e.g. Bangladeshi"
-                        className="h-[50px] bg-white border-[#EDF1F7] rounded-lg focus-visible:ring-blue-500 placeholder:text-[#8F9BB3] text-[15px]"
-                        {...register('nationality', { required: 'Nationality is required' })}
+                    <Controller
+                        name="nationality"
+                        control={control}
+                        rules={{ required: 'Nationality is required' }}
+                        render={({ field }) => {
+                            const options = countryList().getData();
+                            return (
+                                <Select
+                                    instanceId="nationality-select"
+                                    options={options}
+                                    value={options.find(option => option.label === field.value)}
+                                    onChange={(selected) => field.onChange(selected?.label)}
+                                    placeholder="Select nationality..."
+                                    className="react-select-container"
+                                    classNamePrefix="react-select"
+                                    styles={{
+                                        control: (base) => ({
+                                            ...base,
+                                            height: '50px',
+                                            backgroundColor: 'white',
+                                            borderColor: '#EDF1F7',
+                                            borderRadius: '8px',
+                                            fontSize: '15px',
+                                            boxShadow: 'none',
+                                            '&:hover': {
+                                                borderColor: '#EDF1F7',
+                                            },
+                                        }),
+                                        placeholder: (base) => ({
+                                            ...base,
+                                            color: '#8F9BB3',
+                                        }),
+                                        menu: (base) => ({
+                                            ...base,
+                                            borderRadius: '8px',
+                                            zIndex: 50,
+                                        }),
+                                        option: (base, state) => ({
+                                            ...base,
+                                            backgroundColor: state.isSelected ? '#E9F8FF' : state.isFocused ? '#F7F7F74F' : 'white',
+                                            color: state.isSelected ? '#00AAFF' : '#1A1A1A',
+                                            '&:active': {
+                                                backgroundColor: '#E9F8FF',
+                                            },
+                                        }),
+                                    }}
+                                />
+                            );
+                        }}
                     />
                     {errors.nationality && <p className="text-sm text-red-500">{errors.nationality.message as string}</p>}
                 </div>

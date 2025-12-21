@@ -12,6 +12,8 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { useUpload } from '@/hooks/use-upload';
+import { toast } from 'sonner';
 
 interface AddFloorPlanModalProps {
     isOpen: boolean;
@@ -20,31 +22,32 @@ interface AddFloorPlanModalProps {
 }
 
 export function AddFloorPlanModal({ isOpen, onClose, onAdd }: AddFloorPlanModalProps) {
+    const { uploadFile, isUploading } = useUpload();
     const [propertyType, setPropertyType] = useState('');
     const [livingArea, setLivingArea] = useState('');
     const [price, setPrice] = useState('');
     const [floorPlanImage, setFloorPlanImage] = useState<string | null>(null);
 
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setFloorPlanImage(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            const uploadedUrl = await uploadFile(file);
+            if (uploadedUrl) {
+                setFloorPlanImage(uploadedUrl);
+                toast.success('Floor plan image uploaded successfully');
+            }
         }
     };
 
-    const handleImageDrop = (e: React.DragEvent) => {
+    const handleImageDrop = async (e: React.DragEvent) => {
         e.preventDefault();
         const file = e.dataTransfer.files?.[0];
         if (file && file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setFloorPlanImage(reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            const uploadedUrl = await uploadFile(file);
+            if (uploadedUrl) {
+                setFloorPlanImage(uploadedUrl);
+                toast.success('Floor plan image uploaded successfully');
+            }
         }
     };
 

@@ -358,7 +358,7 @@ export function PropertyCard({ property, onStatusChange, onToggleActive }: Prope
                         <div className="flex px-[8px] items-center gap-1 h-[28px] bg-[#E3F2FD] rounded-full">
                             <Eye className="w-2.5 h-2.5 text-[#2196F3]" />
                             <span className="text-[10px] font-semibold text-[#2196F3]">
-                                {property.pfVerificationStatus?.toLowerCase() === 'rejected' ? 'N/A' : '56 Leads'}
+                                {property.pfVerificationStatus?.toLowerCase() === 'rejected' ? 'N/A' : `${property.leadsCount || 0} Leads`}
                             </span>
                         </div>
                     </div>
@@ -368,6 +368,6 @@ export function PropertyCard({ property, onStatusChange, onToggleActive }: Prope
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

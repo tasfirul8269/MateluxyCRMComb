@@ -41,8 +41,9 @@ export const LeadService = {
         const response = await api.patch(`/leads/${leadId}/responsible`, { agentId });
         return response.data;
     },
-    getStats: async () => {
-        const response = await api.get('/leads/stats');
+    getStats: async (source?: string) => {
+        const params = source ? `?source=${encodeURIComponent(source)}` : '';
+        const response = await api.get(`/leads/stats${params}`);
         return response.data;
     },
     getLeadSourceStats: async () => {

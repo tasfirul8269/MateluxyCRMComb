@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { useStickyFilter } from '@/hooks/use-sticky-filter';
 
 export default function AgentsPropertiesPage() {
     const queryClient = useQueryClient();
@@ -38,6 +39,8 @@ export default function AgentsPropertiesPage() {
         queryKey: ['property-aggregates'],
         queryFn: getPropertyAggregates,
     });
+
+    const { isSticky, filterBarRef, sentinelRef } = useStickyFilter();
 
     // Fetch properties
     // TODO: Ideally we should filter by properties from agents distinctively if needed. 
@@ -155,10 +158,15 @@ export default function AgentsPropertiesPage() {
                     </div>
                 </div>
 
+                {/* Sentinel element to detect when filter bar should stick */}
+                <div ref={sentinelRef} className="h-0" />
+
                 {/* Filters Bar - Sticky */}
                 <div
-                    className="flex items-center gap-4 bg-white py-4 mb-8 rounded-xl transition-all"
-                    style={{ position: 'sticky', top: '0px', zIndex: 100 }}
+                    ref={filterBarRef}
+                    className={`flex items-center gap-4 bg-white py-4 mb-8 rounded-xl transition-all z-10 ${
+                        isSticky ? 'sticky top-0' : ''
+                    }`}
                 >
                     <div className="relative flex-1 max-w-[400px]">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8F9BB3]" />

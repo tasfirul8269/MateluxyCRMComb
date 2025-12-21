@@ -16,12 +16,16 @@ interface AdditionalTabProps {
     watch: UseFormWatch<any>;
 }
 
+import { useUpload } from '@/hooks/use-upload';
+import { toast } from 'sonner';
+
 interface Amenity {
     name: string;
     icon: string;
 }
 
 export function AdditionalTab({ register, setValue, watch }: AdditionalTabProps) {
+    const { uploadFile, isUploading } = useUpload();
     const [amenitiesCover, setAmenitiesCover] = useState<string | null>(watch('amenitiesCover') || null);
     const [amenities, setAmenities] = useState<Amenity[]>(watch('amenities') || []);
     const [newAmenity, setNewAmenity] = useState('');
@@ -38,42 +42,40 @@ export function AdditionalTab({ register, setValue, watch }: AdditionalTabProps)
     };
 
     // Brochure Upload
-    const handleBrochureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleBrochureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setValue('brochure', reader.result as string);
-            };
-            reader.readAsDataURL(file);
+            const uploadedUrl = await uploadFile(file);
+            if (uploadedUrl) {
+                setValue('brochure', uploadedUrl);
+                toast.success('Brochure uploaded successfully');
+            }
         }
     };
 
     // Amenities Cover Photo
-    const handleCoverPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleCoverPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const result = reader.result as string;
-                setAmenitiesCover(result);
-                setValue('amenitiesCover', result);
-            };
-            reader.readAsDataURL(file);
+            const uploadedUrl = await uploadFile(file);
+            if (uploadedUrl) {
+                setAmenitiesCover(uploadedUrl);
+                setValue('amenitiesCover', uploadedUrl);
+                toast.success('Amenities cover uploaded successfully');
+            }
         }
     };
 
-    const handleCoverPhotoDrop = (e: React.DragEvent) => {
+    const handleCoverPhotoDrop = async (e: React.DragEvent) => {
         e.preventDefault();
         const file = e.dataTransfer.files?.[0];
         if (file && file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const result = reader.result as string;
-                setAmenitiesCover(result);
-                setValue('amenitiesCover', result);
-            };
-            reader.readAsDataURL(file);
+            const uploadedUrl = await uploadFile(file);
+            if (uploadedUrl) {
+                setAmenitiesCover(uploadedUrl);
+                setValue('amenitiesCover', uploadedUrl);
+                toast.success('Amenities cover uploaded successfully');
+            }
         }
     };
 

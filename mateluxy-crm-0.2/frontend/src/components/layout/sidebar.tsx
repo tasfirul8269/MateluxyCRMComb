@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { useDraggable } from '@dnd-kit/core';
 import {
     LayoutDashboard,
     Building2,
@@ -20,7 +21,8 @@ import {
     Briefcase,
     Layers,
     Code2,
-    Construction
+    Construction,
+    GripVertical
 } from 'lucide-react';
 import {
     Dialog,
@@ -31,9 +33,10 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 
-interface MenuItem {
+export interface MenuItem {
     title: string;
     icon: React.ElementType;
+    iconKey: string; // Key for icon lookup from ICON_MAP (for serialization)
     href: string;
     submenu?: { title: string; href: string; underDevelopment?: boolean }[];
     underDevelopment?: boolean;
@@ -47,17 +50,18 @@ const UNDER_DEVELOPMENT_ITEMS = [
     'Password Manager'
 ];
 
-const MENU_ITEMS: MenuItem[] = [
-    { title: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
+export const MENU_ITEMS: MenuItem[] = [
+    { title: 'Dashboard', icon: LayoutDashboard, iconKey: 'LayoutDashboard', href: '/dashboard' },
     {
         title: 'Properties',
         icon: Building2,
+        iconKey: 'Building2',
         href: '/properties',
         submenu: [
             { title: 'Active Properties', href: '/properties/all' },
             { title: 'Add New Property', href: '/properties/new' },
             { title: 'Draft Properties', href: '/properties/draft' },
-            { title: 'From Agents', href: '/properties/agents' },
+            { title: 'From Agents', href: '/properties/agents', underDevelopment: true },
             { title: 'Unpublished', href: '/properties/unpublished' },
             { title: 'Rejected Properties', href: '/properties/rejected' },
             { title: 'Sold Properties', href: '/properties/sold' },
@@ -67,18 +71,20 @@ const MENU_ITEMS: MenuItem[] = [
     {
         title: 'Off Plan',
         icon: Layers,
+        iconKey: 'Layers',
         href: '/off-plan',
         submenu: [
             { title: 'Add New Property', href: '/off-plan/new' },
             { title: 'All Properties', href: '/off-plan' },
             { title: 'Draft Properties', href: '/off-plan/draft' },
-            { title: 'From Agents', href: '/off-plan/agents' },
+            { title: 'From Agents', href: '/off-plan/agents', underDevelopment: true },
             { title: 'Unpublished', href: '/off-plan/unpublished' },
         ],
     },
     {
         title: 'Leads',
         icon: Users,
+        iconKey: 'Users',
         href: '/leads',
         submenu: [
             { title: 'Add Lead', href: '/leads/new' },
@@ -87,16 +93,59 @@ const MENU_ITEMS: MenuItem[] = [
             { title: 'Property Finder', href: '/leads/property-finder' },
         ],
     },
-    { title: 'Agents', icon: UserCircle, href: '/agents' },
-    { title: 'Developers', icon: Briefcase, href: '/developers' },
-    { title: 'Integration', icon: Code2, href: '/integration' },
-    { title: 'Activity Logs', icon: Activity, href: '/activity-logs' },
-    { title: 'File Manager', icon: FolderOpen, href: '/file-manager', underDevelopment: true },
-    { title: 'Agent App Notifications', icon: Bell, href: '/notifications', underDevelopment: true },
-    { title: 'Admin & Editors', icon: Lock, href: '/users' },
-    { title: 'System Settings', icon: Settings, href: '/settings', underDevelopment: true },
-    { title: 'Password Manager', icon: Lock, href: '/passwords', underDevelopment: true },
+    { title: 'Agents', icon: UserCircle, iconKey: 'UserCircle', href: '/agents' },
+    { title: 'Developers', icon: Briefcase, iconKey: 'Briefcase', href: '/developers' },
+    { title: 'Integration', icon: Code2, iconKey: 'Code2', href: '/integration' },
+    { title: 'Activity Logs', icon: Activity, iconKey: 'Activity', href: '/activity-logs' },
+    { title: 'File Manager', icon: FolderOpen, iconKey: 'FolderOpen', href: '/file-manager', underDevelopment: true },
+    { title: 'Agent App Notifications', icon: Bell, iconKey: 'Bell', href: '/notifications', underDevelopment: true },
+    { title: 'Admin & Editors', icon: Lock, iconKey: 'Lock', href: '/users' },
+    { title: 'System Settings', icon: Settings, iconKey: 'Settings', href: '/settings', underDevelopment: true },
+    { title: 'Password Manager', icon: Lock, iconKey: 'Lock', href: '/passwords', underDevelopment: true },
 ];
+
+// Draggable wrapper for sidebar menu items
+function DraggableMenuItem({ item, children }: { item: MenuItem; children: React.ReactNode }) {
+    const [mounted, setMounted] = useState(false);
+    const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+        id: `sidebar-${item.href}`,
+        data: {
+            id: item.href,
+            title: item.title,
+            iconKey: item.iconKey,
+            href: item.href,
+            type: 'sidebar-item',
+        },
+    });
+
+    // Prevent hydration mismatch by only applying drag attributes after mount
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    return (
+        <div
+            ref={mounted ? setNodeRef : undefined}
+            className={cn(
+                "relative group/drag",
+                isDragging && "opacity-50"
+            )}
+        >
+            {/* Drag handle - only render with attributes after hydration */}
+            {mounted && (
+                <div
+                    {...attributes}
+                    {...listeners}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 opacity-0 group-hover/drag:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1 rounded hover:bg-gray-100"
+                    title="Drag to bottom nav"
+                >
+                    <GripVertical className="h-4 w-4 text-gray-400" />
+                </div>
+            )}
+            {children}
+        </div>
+    );
+}
 
 export function Sidebar() {
     const pathname = usePathname();
@@ -166,11 +215,11 @@ export function Sidebar() {
                                                 "group flex w-full items-center justify-between rounded-xl px-3 py-3 text-[15px] font-medium transition-all",
                                                 isParentActive
                                                     ? "bg-[#00AAFF] text-white shadow-sm"
-                                                    : "text-[#222F3E] hover:bg-gray-50"
+                                                    : "text-[#727C90] hover:bg-gray-50"
                                             )}
                                         >
                                             <div className="flex items-center gap-3">
-                                                <item.icon className={cn("h-5 w-5", isParentActive ? "text-white" : "text-[#8E99A4]")} />
+                                                <item.icon className={cn("h-5 w-5", isParentActive ? "text-white" : "text-[#727C90]")} />
                                                 <span>{item.title}</span>
                                             </div>
                                             <div
@@ -184,7 +233,7 @@ export function Sidebar() {
                                                 <ChevronDown
                                                     className={cn(
                                                         "h-4 w-4 transition-transform duration-200",
-                                                        isParentActive ? "text-white" : "text-[#8E99A4]",
+                                                        isParentActive ? "text-white" : "text-[#727C90]",
                                                         isExpanded ? "rotate-180" : ""
                                                     )}
                                                 />
@@ -208,7 +257,7 @@ export function Sidebar() {
                                                                 {sub.underDevelopment ? (
                                                                     <button
                                                                         onClick={() => handleUnderDevClick(sub.title)}
-                                                                        className="block pl-5 py-2 text-[14px] font-medium transition-colors w-full text-left text-[#8E99A4] hover:text-[#222F3E]"
+                                                                        className="block pl-5 py-2 text-[14px] font-medium transition-colors w-full text-left text-[#727C90] hover:bg-gray-50/50"
                                                                     >
                                                                         {sub.title}
                                                                     </button>
@@ -219,7 +268,7 @@ export function Sidebar() {
                                                                             "block pl-5 py-2 text-[14px] font-medium transition-colors",
                                                                             isSubActive
                                                                                 ? "text-[#00AAFF]"
-                                                                                : "text-[#8E99A4] hover:text-[#222F3E]"
+                                                                                : "text-[#727C90] hover:bg-gray-50/50"
                                                                         )}
                                                                     >
                                                                         {sub.title}
@@ -243,11 +292,11 @@ export function Sidebar() {
                                         onClick={() => handleUnderDevClick(item.title)}
                                         className={cn(
                                             "group flex w-full items-center justify-between rounded-xl px-3 py-3 text-[15px] font-medium transition-all",
-                                            "text-[#222F3E] hover:bg-gray-50"
+                                            "text-[#727C90] hover:bg-gray-50"
                                         )}
                                     >
                                         <div className="flex items-center gap-3">
-                                            <item.icon className="h-5 w-5 text-[#8E99A4]" />
+                                            <item.icon className="h-5 w-5 text-[#727C90]" />
                                             <span>{item.title}</span>
                                         </div>
                                     </button>
@@ -255,22 +304,23 @@ export function Sidebar() {
                             }
 
                             return (
-                                <Link
-                                    key={item.title}
-                                    href={item.href}
-                                    onClick={() => setExpandedMenu(null)}
-                                    className={cn(
-                                        "group flex w-full items-center justify-between rounded-xl px-3 py-3 text-[15px] font-medium transition-all",
-                                        isDirectActive
-                                            ? "bg-[#00AAFF] text-white shadow-sm"
-                                            : "text-[#222F3E] hover:bg-gray-50"
-                                    )}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <item.icon className={cn("h-5 w-5", isDirectActive ? "text-white" : "text-[#8E99A4]")} />
-                                        <span>{item.title}</span>
-                                    </div>
-                                </Link>
+                                <DraggableMenuItem key={item.title} item={item}>
+                                    <Link
+                                        href={item.href}
+                                        onClick={() => setExpandedMenu(null)}
+                                        className={cn(
+                                            "group flex w-full items-center justify-between rounded-xl px-3 py-3 text-[15px] font-medium transition-all",
+                                            isDirectActive
+                                                ? "bg-[#00AAFF] text-white shadow-sm"
+                                                : "text-[#727C90] hover:bg-gray-50"
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <item.icon className={cn("h-5 w-5", isDirectActive ? "text-white" : "text-[#727C90]")} />
+                                            <span>{item.title}</span>
+                                        </div>
+                                    </Link>
+                                </DraggableMenuItem>
                             );
                         })}
                     </nav>

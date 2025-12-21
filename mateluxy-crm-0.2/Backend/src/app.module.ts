@@ -18,6 +18,7 @@ import { IntegrationsModule } from './modules/integrations/integrations.module';
 import { ActivityModule } from './modules/activity/activity.module';
 import { SchedulerModule } from './modules/scheduler/scheduler.module';
 
+import { UploadModule } from './modules/upload/upload.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { SchedulerModule } from './modules/scheduler/scheduler.module';
     IntegrationsModule,
     ActivityModule,
     SchedulerModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],

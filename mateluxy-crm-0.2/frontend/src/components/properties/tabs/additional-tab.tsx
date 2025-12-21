@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { UseFormRegister, Control, FieldErrors, UseFormSetValue, UseFormWatch } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,7 +24,7 @@ export function AdditionalTab({ register, control, errors, setValue, watch, cate
     const availableFrom = watch('availableFrom');
     const amenitiesList = watch('amenities');
 
-    // Initialize state from form values
+    // Initialize state
     const [availabilityType, setAvailabilityType] = useState<'immediately' | 'fromDate'>(
         availableFrom ? 'fromDate' : 'immediately'
     );
@@ -35,30 +35,37 @@ export function AdditionalTab({ register, control, errors, setValue, watch, cate
         availableFrom ? new Date(availableFrom) : new Date()
     );
     const [showMore, setShowMore] = useState(false);
+    const [selectedAmenities, setSelectedAmenities] = useState<Set<string>>(new Set());
 
-    // Initialize amenities set from form array
-    const [selectedAmenities, setSelectedAmenities] = useState<Set<string>>(() => {
-        const initialSet = new Set<string>();
-        if (Array.isArray(amenitiesList)) {
-            amenitiesList.forEach((id: string) => initialSet.add(id));
+    // Synchronize availability type and date from form value
+    useEffect(() => {
+        if (availableFrom) {
+            setAvailabilityType('fromDate');
+            const date = new Date(availableFrom);
+            if (!isNaN(date.getTime())) {
+                setSelectedDate(date);
+                setCurrentMonth(date);
+            }
+        } else {
+            setAvailabilityType('immediately');
+            setSelectedDate(null);
         }
-        return initialSet;
-    });
+    }, [availableFrom]);
 
-    // Update local state when form value changes (e.g. from sanitization)
-    React.useEffect(() => {
+    // Synchronize selected amenities set from form array
+    useEffect(() => {
+        const nextSet = new Set<string>();
         if (Array.isArray(amenitiesList)) {
-            setSelectedAmenities(new Set(amenitiesList));
+            amenitiesList.forEach((slug: string) => nextSet.add(slug));
         }
+        setSelectedAmenities(nextSet);
     }, [amenitiesList]);
-
-
 
     // Load static amenities based on category
     const amenities = getAmenitiesByCategory(category || 'Residential');
 
     // Group amenities by category for display
-    const groupedAmenities = React.useMemo(() => {
+    const groupedAmenities = useMemo(() => {
         const groups: Record<string, AmenityItem[]> = {};
         amenities.forEach(item => {
             if (!groups[item.category]) {
@@ -70,10 +77,7 @@ export function AdditionalTab({ register, control, errors, setValue, watch, cate
     }, [amenities]);
 
     // Sanitize amenities on mount or category change
-    // This ensures that:
-    // 1. Old database IDs are removed (migrating to slugs)
-    // 2. Incompatible amenities are removed when switching categories (e.g. Residential -> Commercial)
-    React.useEffect(() => {
+    useEffect(() => {
         const validSlugs = new Set(amenities.map(a => a.slug));
         const currentAmenities = Array.isArray(amenitiesList) ? amenitiesList : [];
 
@@ -84,28 +88,24 @@ export function AdditionalTab({ register, control, errors, setValue, watch, cate
             (currentAmenities.length > 0 && !sanitized.every((val: string, index: number) => val === currentAmenities[index]))) {
 
             setValue('amenities', sanitized);
-            setSelectedAmenities(new Set(sanitized));
         }
-    }, [category, amenities, setValue]); // amenities depends on category, so this runs when category changes
+    }, [category, amenities, setValue]);
 
     const handleAutoGenerate = () => {
         const randomRef = `REF-${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
         setValue('reference', randomRef);
     };
 
-    const toggleAmenity = (id: string) => {
+    const toggleAmenity = (slug: string) => {
         const next = new Set(selectedAmenities);
-        if (next.has(id)) {
-            next.delete(id);
+        if (next.has(slug)) {
+            next.delete(slug);
         } else {
-            next.add(id);
+            next.add(slug);
         }
-        setSelectedAmenities(next);
-        // Update form value with selected amenity IDs
+        // Update form value with selected amenity slugs
         setValue('amenities', Array.from(next));
     };
-
-
 
     // Calendar helpers
     const getDaysInMonth = (date: Date) => {
@@ -134,8 +134,6 @@ export function AdditionalTab({ register, control, errors, setValue, watch, cate
     const firstDayOfMonth = getFirstDayOfMonth(currentMonth);
     const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
     const emptyDays = Array.from({ length: firstDayOfMonth }, (_, i) => i);
-
-    const displayedAmenities = showMore ? amenities : amenities.slice(0, 20);
 
     return (
         <div className="space-y-6">
@@ -176,7 +174,10 @@ export function AdditionalTab({ register, control, errors, setValue, watch, cate
                     <div className="flex gap-2">
                         <button
                             type="button"
-                            onClick={() => setAvailabilityType('immediately')}
+                            onClick={() => {
+                                setAvailabilityType('immediately');
+                                setValue('availableFrom', null);
+                            }}
                             className={cn(
                                 "flex-1 h-[50px] rounded-full border text-[15px] font-medium transition-colors",
                                 availabilityType === 'immediately'
@@ -212,11 +213,11 @@ export function AdditionalTab({ register, control, errors, setValue, watch, cate
                         </h3>
                     </div>
 
-                    <div className="space-y-6">
+                    <div className="max-h-[400px] overflow-y-auto space-y-6 pr-2 custom-scrollbar">
                         {Object.entries(groupedAmenities).map(([group, items]) => (
                             <div key={group} className="space-y-3">
                                 <h4 className="text-[13px] font-semibold text-gray-500 uppercase tracking-wider">{group}</h4>
-                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                <div className="grid grid-cols-2 gap-3">
                                     {items.map((amenity) => (
                                         <label
                                             key={amenity.slug}
@@ -246,7 +247,7 @@ export function AdditionalTab({ register, control, errors, setValue, watch, cate
                                                 )}
                                             </div>
                                             <span className={cn(
-                                                "text-[14px] font-medium select-none",
+                                                "text-[14px] font-medium select-none truncate",
                                                 selectedAmenities.has(amenity.slug) ? "text-blue-700" : "text-gray-700"
                                             )}>
                                                 {amenity.label}
@@ -324,8 +325,6 @@ export function AdditionalTab({ register, control, errors, setValue, watch, cate
                     </div>
                 )}
             </div>
-
-
         </div>
     );
 }

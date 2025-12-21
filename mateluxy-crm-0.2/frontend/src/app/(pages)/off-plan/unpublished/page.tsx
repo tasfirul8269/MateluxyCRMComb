@@ -12,6 +12,7 @@ import { OffPlanPropertyCard } from '@/components/off-plan-properties/off-plan-p
 import { OffPlanProperty } from '@/lib/services/off-plan-property.service';
 import { PropertyFilters, PropertyFilterValues } from '@/components/off-plan-properties/property-filters';
 import { SortMenu, SortConfig } from '@/components/properties/sort-menu';
+import { useStickyFilter } from '@/hooks/use-sticky-filter';
 
 export default function OffPlanUnpublishedPropertiesPage() {
     const [searchQuery, setSearchQuery] = useState('');
@@ -54,6 +55,8 @@ export default function OffPlanUnpublishedPropertiesPage() {
         sortOrder: sortConfig.sortOrder,
     });
 
+    const { isSticky, filterBarRef, sentinelRef } = useStickyFilter();
+
     return (
         <div className="flex min-h-screen bg-[#ffffff]">
             {/* Left Sidebar - Filters */}
@@ -84,10 +87,15 @@ export default function OffPlanUnpublishedPropertiesPage() {
                     </Link>
                 </div>
 
+                {/* Sentinel element to detect when filter bar should stick */}
+                <div ref={sentinelRef} className="h-0" />
+
                 {/* Search & Filters Bar - Sticky */}
                 <div
-                    className="flex items-center gap-3 bg-white py-4 mb-8 rounded-xl transition-all"
-                    style={{ position: 'sticky', top: '0px', zIndex: 100 }}
+                    ref={filterBarRef}
+                    className={`flex items-center gap-3 bg-white py-4 mb-8 rounded-xl transition-all z-10 ${
+                        isSticky ? 'sticky top-0 ' : ''
+                    }`}
                 >
                     {/* Search */}
                     <div className="relative flex-1 max-w-[400px]">

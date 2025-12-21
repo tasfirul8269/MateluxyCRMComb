@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { VirtuosoGrid } from 'react-virtuoso';
+import { useStickyFilter } from '@/hooks/use-sticky-filter';
 
 export default function RentedPropertiesPage() {
     const queryClient = useQueryClient();
@@ -47,6 +48,8 @@ export default function RentedPropertiesPage() {
         filters,
         sortConfig
     );
+
+    const { isSticky, filterBarRef, sentinelRef } = useStickyFilter();
 
     // Mutations
     const statusMutation = useMutation({
@@ -152,17 +155,23 @@ export default function RentedPropertiesPage() {
                 </div>
             )}
 
-            <div className="flex-1 p-8 max-w-[1600px] mx-auto h-screen flex flex-col overflow-hidden">
+            <div className="flex-1 p-8 max-w-[1600px] mx-auto">
                 {/* Header Title */}
-                <div className="flex items-center justify-between mb-6 flex-shrink-0">
+                <div className="flex items-center justify-between mb-6">
                     <h1 className="text-[24px] font-semibold text-[#1A1A1A]" style={{ fontFamily: 'var(--font-montserrat)' }}>
                         Rented Properties <span className="text-[#8F9BB3] font-medium ml-1">({totalCount})</span>
                     </h1>
                 </div>
 
+                {/* Sentinel element to detect when filter bar should stick */}
+                <div ref={sentinelRef} className="h-0" />
+
                 {/* Filters Bar - Sticky */}
                 <div
-                    className="flex items-center gap-4 bg-white py-4 mb-4 rounded-xl transition-all flex-shrink-0 z-10"
+                    ref={filterBarRef}
+                    className={`flex items-center gap-4 bg-white py-4 mb-4 rounded-xl transition-all z-10 ${
+                        isSticky ? 'sticky top-0' : ''
+                    }`}
                 >
                     <div className="relative flex-1 max-w-[400px]">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8F9BB3]" />
@@ -194,72 +203,45 @@ export default function RentedPropertiesPage() {
                 </div>
 
                 {/* Grid Content */}
-                <div className="flex-1 min-h-0">
-                    {isLoading ? (
-                        <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
-                            {[...Array(8)].map((_, i) => (
-                                <div key={i} className="flex justify-center">
-                                    <PropertyCardSkeleton />
-                                </div>
-                            ))}
-                        </div>
-                    ) : properties.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-20 text-center">
-                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                                <Search className="w-8 h-8 text-gray-400" />
+                {isLoading ? (
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
+                        {[...Array(8)].map((_, i) => (
+                            <div key={i} className="flex justify-center">
+                                <PropertyCardSkeleton />
                             </div>
-                            <h3 className="text-lg font-medium text-gray-900 mb-1">No rented properties found</h3>
-                            <p className="text-gray-500 max-w-sm mx-auto">
-                                We couldn't find any properties marked as rented.
-                            </p>
+                        ))}
+                    </div>
+                ) : properties.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            <Search className="w-8 h-8 text-gray-400" />
                         </div>
-                    ) : (
-                        <VirtuosoGrid
-                            style={{ height: '100%' }}
-                            totalCount={properties.length}
-                            overscan={200}
-                            endReached={() => {
-                                if (hasNextPage && !isFetchingNextPage) {
-                                    fetchNextPage();
-                                }
-                            }}
-                            components={{
-                                List: React.forwardRef(({ style, children, ...props }: any, ref) => (
-                                    <div
-                                        ref={ref}
-                                        {...props}
-                                        style={{
-                                            ...style,
-                                            display: 'grid',
-                                            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                                            gap: '16px',
-                                            paddingBottom: '32px'
-                                        }}
-                                    >
-                                        {children}
-                                    </div>
-                                )),
-                                Item: ({ children, ...props }: any) => (
-                                    <div {...props} className="flex justify-center">
-                                        {children}
-                                    </div>
-                                ),
-                                Footer: () => isFetchingNextPage ? (
-                                    <div className="col-span-full flex justify-center py-8">
-                                        <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
-                                    </div>
-                                ) : null
-                            }}
-                            itemContent={(index: number) => (
+                        <h3 className="text-lg font-medium text-gray-900 mb-1">No rented properties found</h3>
+                        <p className="text-gray-500 max-w-sm mx-auto">
+                            We couldn't find any properties marked as rented.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
+                        {properties.map((property) => (
+                            <div key={property.id} className="flex justify-center">
                                 <PropertyCard
-                                    property={properties[index]}
+                                    property={property}
                                     onStatusChange={handleStatusChange}
                                     onToggleActive={handleToggleActive}
                                 />
-                            )}
-                        />
-                    )}
-                </div>
+                            </div>
+                        ))}
+                        {isFetchingNextPage && (
+                            <div className="col-span-full flex justify-center py-8">
+                                <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
+                            </div>
+                        )}
+                        {hasNextPage && !isFetchingNextPage && (
+                            <div ref={observerTarget} className="h-4" />
+                        )}
+                    </div>
+                )}
             </div>
         </div>
     );

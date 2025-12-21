@@ -54,6 +54,7 @@ export interface Property {
     updatedAt: string;
     pfLocationId?: number;
     pfLocationPath?: string;
+    leadsCount?: number;
 }
 
 export interface CreatePropertyData {

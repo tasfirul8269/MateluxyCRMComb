@@ -210,7 +210,9 @@ export function OffPlanPropertyCard({ property }: OffPlanPropertyCardProps) {
                         {/* Leads Pill */}
                         <div className="flex px-[8px] items-center gap-1 h-[32px] bg-[#E3F2FD] rounded-full">
                             <Eye className="w-2.5 h-2.5 text-[#2196F3]" />
-                            <span className="text-[11px] font-semibold text-[#2196F3]" style={{ fontFamily: 'var(--font-plus-jakarta-sans)' }}>56 Leads</span>
+                            <span className="text-[11px] font-semibold text-[#2196F3]" style={{ fontFamily: 'var(--font-plus-jakarta-sans)' }}>
+                                {property.leadsCount || 0} Leads
+                            </span>
                         </div>
                     </div>
 

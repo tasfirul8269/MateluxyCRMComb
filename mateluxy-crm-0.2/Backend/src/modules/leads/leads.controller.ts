@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards, Ip } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards, Ip } from '@nestjs/common';
 import { LeadsService } from './leads.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -15,8 +15,8 @@ export class LeadsController {
     }
 
     @Get('stats')
-    getStats() {
-        return this.leadsService.getStats();
+    getStats(@Query('source') source?: string) {
+        return this.leadsService.getStats(source);
     }
 
     @Get('source-stats')

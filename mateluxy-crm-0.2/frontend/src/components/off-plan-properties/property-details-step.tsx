@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,6 +14,7 @@ import { GeneralDetailsTab } from './tabs/general-details-tab';
 import { MediaTab } from './tabs/media-tab';
 import { AdditionalTab } from './tabs/additional-tab';
 import { AgentTab } from './tabs/agent-tab';
+import { SubmissionOverlay } from '@/components/ui/submission-overlay';
 
 interface PropertyDetailsStepProps {
     developerId: string;
@@ -36,87 +37,89 @@ const tabs = [
 
 const propertySchema = z.object({
     // Specific Details
-    emirate: z.string().optional(),
-    launchType: z.string().optional(),
-    projectHighlight: z.string().optional(),
-    propertyType: z.array(z.string()).optional(),
-    plotArea: z.number().min(0).optional(),
-    area: z.number().min(0).optional(),
-    bedrooms: z.number().min(0).optional(),
-    kitchens: z.number().min(0).optional(),
-    bathrooms: z.number().min(0).optional(),
+    emirate: z.string().nullish(),
+    launchType: z.string().nullish(),
+    projectHighlight: z.string().nullish(),
+    propertyType: z.array(z.string()).nullish(),
+    plotArea: z.number().min(0).nullish(),
+    area: z.number().min(0).nullish(),
+    bedrooms: z.number().min(0).nullish(),
+    kitchens: z.number().min(0).nullish(),
+    bathrooms: z.number().min(0).nullish(),
 
     // Locations
-    address: z.string().optional(),
-    latitude: z.number().optional(),
-    longitude: z.number().optional(),
-    style: z.string().optional(),
-    focalPoint: z.string().optional(),
-    focalPointImage: z.string().optional(),
+    address: z.string().nullish(),
+    latitude: z.number().nullish(),
+    longitude: z.number().nullish(),
+    style: z.string().nullish(),
+    focalPoint: z.string().nullish(),
+    focalPointImage: z.string().nullish(),
     nearbyHighlights: z.array(z.object({
-        title: z.string(),
-        subtitle: z.string(),
+        title: z.string().nullish(),
+        subtitle: z.string().nullish(),
         highlights: z.array(z.object({
-            name: z.string(),
-            image: z.string().optional(),
-        })),
-    })).optional(),
+            name: z.string().nullish(),
+            image: z.string().nullish(),
+        })).nullish(),
+    })).nullish(),
 
     // Price
-    startingPrice: z.number().optional(),
-    serviceCharges: z.number().optional(),
-    brokerFee: z.string().optional(),
-    roiPotential: z.number().optional(),
+    startingPrice: z.number().nullish(),
+    serviceCharges: z.number().nullish(),
+    brokerFee: z.string().nullish(),
+    roiPotential: z.number().nullish(),
     paymentPlan: z.object({
-        title: z.string(),
-        subtitle: z.string(),
+        title: z.string().nullish(),
+        subtitle: z.string().nullish(),
         milestones: z.array(z.object({
-            label: z.string(),
-            percentage: z.string(),
-            subtitle: z.string(),
-        })),
-    }).optional(),
+            label: z.string().nullish(),
+            percentage: z.string().nullish(),
+            subtitle: z.string().nullish(),
+        })).nullish(),
+    }).nullish(),
 
     // DLD & Status
-    dldPermitNumber: z.string().optional(),
-    dldQrCode: z.string().optional(),
-    projectStage: z.string().optional(),
-    constructionProgress: z.number().min(0).max(100).optional(),
-    handoverDate: z.string().optional(),
+    dldPermitNumber: z.string().nullish(),
+    dldQrCode: z.string().nullish(),
+    projectStage: z.string().nullish(),
+    constructionProgress: z.number().min(0).max(100).nullish(),
+    handoverDate: z.string().nullish(),
 
     // General Details
-    projectTitle: z.string().optional(),
-    shortDescription: z.string().optional(),
-    projectDescription: z.string().optional(),
+    projectTitle: z.string().nullish(),
+    shortDescription: z.string().nullish(),
+    projectDescription: z.string().nullish(),
 
     // Media
-    coverPhoto: z.string().optional(),
-    videoUrl: z.string().optional(),
-    agentVideoUrl: z.string().optional(),
-    virtualTourUrl: z.string().optional(),
-    exteriorMedia: z.array(z.string()).optional(),
-    interiorMedia: z.array(z.string()).optional(),
+    coverPhoto: z.string().nullish(),
+    videoUrl: z.string().nullish(),
+    agentVideoUrl: z.string().nullish(),
+    virtualTourUrl: z.string().nullish(),
+    exteriorMedia: z.array(z.string()).nullish(),
+    interiorMedia: z.array(z.string()).nullish(),
 
     // Additional
-    reference: z.string().optional(),
-    brochure: z.string().optional(),
-    amenitiesCover: z.string().optional(),
-    amenitiesTitle: z.string().optional(),
-    amenitiesSubtitle: z.string().optional(),
+    reference: z.string().nullish(),
+    brochure: z.string().nullish(),
+    amenitiesCover: z.string().nullish(),
+    amenitiesTitle: z.string().nullish(),
+    amenitiesSubtitle: z.string().nullish(),
     amenities: z.array(z.object({
-        name: z.string(),
-        icon: z.string(),
-    })).optional(),
+        name: z.string().nullish(),
+        icon: z.string().nullish(),
+    })).nullish(),
     floorPlans: z.array(z.object({
-        propertyType: z.string(),
-        livingArea: z.string(),
-        price: z.string(),
-        floorPlanImage: z.string().optional(),
-    })).optional(),
+        propertyType: z.string().nullish(),
+        livingArea: z.string().nullish(),
+        price: z.string().nullish(),
+        floorPlanImage: z.string().nullish(),
+    })).nullish(),
 
 
     // Agent
-    assignedAgentId: z.string().optional(),
+    areaExperts: z.record(z.string(), z.array(z.string())).nullish(),
+    projectExperts: z.array(z.string()).nullish(),
+    assignedAgentId: z.string().nullish(),
 });
 
 type PropertyFormValues = z.infer<typeof propertySchema>;
@@ -125,6 +128,7 @@ export function PropertyDetailsStep({ developerId, initialData, onSubmit, onSave
     const [activeTab, setActiveTab] = useState(0);
     const cancelClickedRef = React.useRef(false);
     const hasUnsavedChangesRef = React.useRef(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const router = useRouter();
 
     const {
@@ -135,14 +139,30 @@ export function PropertyDetailsStep({ developerId, initialData, onSubmit, onSave
         setValue,
         formState: { errors, isDirty },
         getValues,
+        reset,
     } = useForm<PropertyFormValues>({
         resolver: zodResolver(propertySchema),
         defaultValues: {
             ...initialData,
             propertyType: initialData?.propertyType || [],
             nearbyHighlights: initialData?.nearbyHighlights || [],
-        } as any,
+            areaExperts: initialData?.areaExperts || {},
+            projectExperts: initialData?.projectExperts || [],
+        } as PropertyFormValues,
     });
+
+    // Reset form when initialData changes
+    React.useEffect(() => {
+        if (initialData) {
+            reset({
+                ...initialData,
+                propertyType: initialData.propertyType || [],
+                nearbyHighlights: initialData.nearbyHighlights || [],
+                areaExperts: initialData.areaExperts || {},
+                projectExperts: initialData.projectExperts || [],
+            } as PropertyFormValues);
+        }
+    }, [initialData, reset]);
 
     // Track form changes
     const formValues = watch();
@@ -222,14 +242,20 @@ export function PropertyDetailsStep({ developerId, initialData, onSubmit, onSave
         };
     }, [autoSaveDraft]);
 
-    const handleFormSubmit = (data: PropertyFormValues) => {
+    const handleFormSubmit = async (data: PropertyFormValues) => {
         console.log('✅ Form validation passed! Publishing with data:', data);
-        cancelClickedRef.current = true; // Prevent auto-save
-        hasUnsavedChangesRef.current = false;
-        onSubmit({
-            ...data,
-            developerId,
-        });
+        setIsSubmitting(true);
+        try {
+            cancelClickedRef.current = true; // Prevent auto-save
+            hasUnsavedChangesRef.current = false;
+            await onSubmit({
+                ...data,
+                developerId,
+            });
+        } catch (error) {
+            console.error('Submission error:', error);
+            setIsSubmitting(false);
+        }
     };
 
     const handleSaveAsDraft = () => {
@@ -413,6 +439,7 @@ export function PropertyDetailsStep({ developerId, initialData, onSubmit, onSave
                     </div>
                 </div>
             </div>
-        </form>
+            <SubmissionOverlay isOpen={isSubmitting} message="Publishing Property..." />
+        </form >
     );
 }

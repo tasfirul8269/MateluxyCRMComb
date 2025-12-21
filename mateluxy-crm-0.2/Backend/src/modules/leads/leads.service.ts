@@ -121,19 +121,30 @@ export class LeadsService {
         return updatedLead;
     }
 
-    async getStats() {
+    async getStats(source?: string) {
         const now = new Date();
         const currentYear = now.getFullYear();
         const lastYear = currentYear - 1;
         const startOfLastYear = new Date(lastYear, 0, 1);
 
+        // Build where clause with optional source filter
+        const whereClause: any = {
+            createdAt: {
+                gte: startOfLastYear,
+            },
+        };
+
+        // Add source filter if provided (case-insensitive matching)
+        if (source && source.toLowerCase() !== 'all') {
+            whereClause.source = {
+                equals: source,
+                mode: 'insensitive',
+            };
+        }
+
         // @ts-ignore Generated Prisma client includes `lead`
         const leads = await this.prisma.lead.findMany({
-            where: {
-                createdAt: {
-                    gte: startOfLastYear,
-                },
-            },
+            where: whereClause,
             select: {
                 createdAt: true,
                 dealPrice: true,

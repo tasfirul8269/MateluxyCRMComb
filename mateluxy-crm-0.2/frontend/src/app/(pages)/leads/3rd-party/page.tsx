@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 import { LeadService } from '@/lib/services/lead.service';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { parseISO } from 'date-fns';
+import { parseISO, format, parse, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import {
     LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from 'recharts';
@@ -15,6 +15,9 @@ import { useAgents } from '@/lib/hooks/use-agents';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { LeadDetailsSidebar } from '@/components/leads/lead-details-sidebar';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Search, CalendarIcon, X } from 'lucide-react';
 
 type Lead = {
     id: string;
@@ -55,6 +58,16 @@ const sourceMeta: Array<{
         { key: 'Whatsapp', label: 'Whatsapp', icon: '/whatsapp_icon.svg', text: '#16a34a', bg: '#f3fbf6', delta: '+01%', fallbackCount: 0 },
         { key: 'Walk in', label: 'Walk in', icon: '/walkin_icon.svg', text: '#1f2937', bg: '#f9f9f9', delta: '+18%', fallbackCount: 0 },
     ];
+
+// Source filter options for chart (includes 'All')
+const sourceFilterOptions = [
+    { key: 'All', label: 'All Sources' },
+    { key: 'Facebook', label: 'Facebook' },
+    { key: 'Instagram', label: 'Instagram' },
+    { key: 'TikTok', label: 'TikTok' },
+    { key: 'Whatsapp', label: 'Whatsapp' },
+    { key: 'Walk in', label: 'Walk in' },
+];
 
 const statusColors: Record<string, { text: string; bg: string }> = {
     New: { text: '#2aa0ff', bg: '#e8f4ff' },
@@ -119,11 +132,11 @@ function useLeads() {
     });
 }
 
-function useLeadStats() {
+function useLeadStats(source: string) {
     return useQuery({
-        queryKey: ['leads', 'stats'],
+        queryKey: ['leads', 'stats', source],
         queryFn: async () => {
-            return LeadService.getStats();
+            return LeadService.getStats(source === 'All' ? undefined : source);
         },
     });
 }
@@ -232,26 +245,92 @@ function LeadCard({
 export default function ThirdPartyLeadsPage() {
     const queryClient = useQueryClient();
     const { data: leads = [], isLoading } = useLeads();
-    const { data: leadStats = [] } = useLeadStats();
-    const { data: agents = [] } = useAgents();
-    const [search, setSearch] = useState('');
+
+    // Agent filter state
+    const [agentSearch, setAgentSearch] = useState('');
+    const [selectedAgents, setSelectedAgents] = useState<Array<{ id: string; name: string; photoUrl?: string | null }>>([]);
+    const [showAgentDropdown, setShowAgentDropdown] = useState(false);
+    const agentSearchRef = useRef<HTMLDivElement>(null);
+
+    // Date filter state
+    const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+    const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+
+    // Chart filter state
     const [showCurrent, setShowCurrent] = useState(true);
     const [showLast, setShowLast] = useState(true);
-    const [selectedSource, setSelectedSource] = useState('Facebook');
+    const [selectedSource, setSelectedSource] = useState('All');
+    const { data: leadStats = [] } = useLeadStats(selectedSource);
+    const { data: agents = [] } = useAgents();
+
+    // Other state
     const [transferLeadId, setTransferLeadId] = useState<string | null>(null);
     const [transferLoading, setTransferLoading] = useState(false);
     const [transferSearch, setTransferSearch] = useState('');
     const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
+    // Close agent dropdown when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (agentSearchRef.current && !agentSearchRef.current.contains(event.target as Node)) {
+                setShowAgentDropdown(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Filter agents for dropdown suggestions
+    const suggestedAgents = useMemo(() => {
+        if (!agentSearch) return agents.slice(0, 5);
+        const term = agentSearch.toLowerCase();
+        return agents.filter((agent) =>
+            agent.name.toLowerCase().includes(term) ||
+            (agent.languages || []).some((lang: string) => lang.toLowerCase().includes(term))
+        ).slice(0, 5);
+    }, [agents, agentSearch]);
+
+    const handleSelectAgent = (agent: { id: string; name: string; photoUrl?: string | null }) => {
+        if (!selectedAgents.find(a => a.id === agent.id)) {
+            setSelectedAgents([...selectedAgents, agent]);
+        }
+        setAgentSearch('');
+        setShowAgentDropdown(false);
+    };
+
+    const handleRemoveAgent = (agentId: string) => {
+        setSelectedAgents(selectedAgents.filter(a => a.id !== agentId));
+    };
+
+    // Combined filtering: by agents AND date range
     const filteredLeads = useMemo(() => {
-        if (!search) return leads;
-        const term = search.toLowerCase();
-        return leads.filter((l) =>
-            l.name.toLowerCase().includes(term) ||
-            (l.email || '').toLowerCase().includes(term) ||
-            (l.source || '').toLowerCase().includes(term),
-        );
-    }, [leads, search]);
+        let result = leads;
+
+        // Filter by selected agents
+        if (selectedAgents.length > 0) {
+            const agentIds = selectedAgents.map(a => a.id);
+            result = result.filter((l) => l.responsibleAgent && agentIds.includes(l.responsibleAgent.id));
+        }
+
+        // Filter by date range
+        if (dateFrom || dateTo) {
+            result = result.filter((l) => {
+                if (!l.createdAt) return false;
+                const leadDate = parseISO(l.createdAt);
+
+                if (dateFrom && dateTo) {
+                    return isWithinInterval(leadDate, { start: startOfDay(dateFrom), end: endOfDay(dateTo) });
+                } else if (dateFrom) {
+                    return leadDate >= startOfDay(dateFrom);
+                } else if (dateTo) {
+                    return leadDate <= endOfDay(dateTo);
+                }
+                return true;
+            });
+        }
+
+        return result;
+    }, [leads, selectedAgents, dateFrom, dateTo]);
 
     const chartData = useMemo(() => {
         if (leadStats.length > 0) return leadStats;
@@ -284,65 +363,192 @@ export default function ThirdPartyLeadsPage() {
     return (
         <div className="min-h-screen bg-[#ffffff] flex items-start">
             <div className="flex-1 min-w-0 px-[30px] pt-6 pb-4">
-                <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div className="flex items-center gap-3">
-                        <Input
-                            placeholder="Search for agent"
-                            className="h-12 w-72 rounded-2xl border border-[#e5ecf5] bg-white text-sm"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
+                <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    {/* Agent Search with Multi-Select */}
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div ref={agentSearchRef} className="relative">
+                            <div className="flex items-center gap-2 flex-wrap min-h-[48px] w-80 rounded-2xl border border-[#e5ecf5] bg-white px-4 py-2">
+                                {/* Selected agent pills */}
+                                {selectedAgents.map((agent) => (
+                                    <span
+                                        key={agent.id}
+                                        className="inline-flex items-center gap-1 rounded-full bg-[#f0f7ff] px-3 py-1 text-[12px] font-medium text-[#0aa5ff]"
+                                    >
+                                        {agent.name}
+                                        <button
+                                            onClick={() => handleRemoveAgent(agent.id)}
+                                            className="ml-1 hover:text-red-500"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </span>
+                                ))}
+                                <input
+                                    type="text"
+                                    placeholder={selectedAgents.length === 0 ? "Search for agent" : ""}
+                                    className="flex-1 min-w-[100px] bg-transparent text-sm outline-none placeholder:text-[#8b97a8]"
+                                    value={agentSearch}
+                                    onChange={(e) => setAgentSearch(e.target.value)}
+                                    onFocus={() => setShowAgentDropdown(true)}
+                                />
+                                <Search className="h-4 w-4 text-[#8b97a8] flex-shrink-0" />
+                            </div>
+
+                            {/* Agent suggestions dropdown */}
+                            {showAgentDropdown && suggestedAgents.length > 0 && (
+                                <div className="absolute top-full left-0 right-0 mt-2 rounded-2xl border border-[#e5ecf5] bg-white shadow-lg z-50 overflow-hidden">
+                                    {suggestedAgents.map((agent) => (
+                                        <button
+                                            key={agent.id}
+                                            type="button"
+                                            onClick={() => handleSelectAgent(agent)}
+                                            className="flex w-full items-center gap-3 px-4 py-3 hover:bg-[#f8fafc] transition-colors text-left"
+                                        >
+                                            <div className="relative h-10 w-10 overflow-hidden rounded-full bg-gray-100 flex-shrink-0">
+                                                {agent.photoUrl ? (
+                                                    <Image src={agent.photoUrl} alt={agent.name} fill className="object-cover" />
+                                                ) : (
+                                                    <span className="flex h-full w-full items-center justify-center text-sm text-gray-500">
+                                                        {agent.name.charAt(0)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-[14px] font-medium text-[#1b2430]">{agent.name}</span>
+                                                <span className="text-[12px] text-[#97a3b7]">
+                                                    {agent.languages && agent.languages.length > 0
+                                                        ? `Speaks ${agent.languages.join(', ')}`
+                                                        : 'Languages not set'}
+                                                </span>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <Input placeholder="dd/mm/yyyy" className="h-12 w-40 rounded-2xl border border-[#e5ecf5] bg-white text-sm" />
-                        <Input placeholder="dd/mm/yyyy" className="h-12 w-40 rounded-2xl border border-[#e5ecf5] bg-white text-sm" />
+
+                    {/* Date Range Filters */}
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[13px] text-[#8b97a8]">Date from :</span>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <button
+                                        className={cn(
+                                            "flex h-11 w-40 items-center justify-between rounded-xl border border-[#e5ecf5] bg-white px-4 text-[13px]",
+                                            !dateFrom && "text-[#8b97a8]"
+                                        )}
+                                    >
+                                        {dateFrom ? format(dateFrom, "dd/MM/yyyy") : "dd/mm/yyyy"}
+                                        <CalendarIcon className="h-4 w-4 text-[#c7ced9]" />
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0 bg-white" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={dateFrom}
+                                        onSelect={setDateFrom}
+                                        initialFocus
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <span className="text-[13px] text-[#8b97a8]">Date to :</span>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <button
+                                        className={cn(
+                                            "flex h-11 w-40 items-center justify-between rounded-xl border border-[#e5ecf5] bg-white px-4 text-[13px]",
+                                            !dateTo && "text-[#8b97a8]"
+                                        )}
+                                    >
+                                        {dateTo ? format(dateTo, "dd/MM/yyyy") : "dd/mm/yyyy"}
+                                        <CalendarIcon className="h-4 w-4 text-[#c7ced9]" />
+                                    </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0 bg-white" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={dateTo}
+                                        onSelect={setDateTo}
+                                        initialFocus
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+
+                        {/* Clear filters button */}
+                        {(selectedAgents.length > 0 || dateFrom || dateTo) && (
+                            <button
+                                onClick={() => {
+                                    setSelectedAgents([]);
+                                    setDateFrom(undefined);
+                                    setDateTo(undefined);
+                                }}
+                                className="flex items-center gap-1 text-[12px] text-[#ff3b30] hover:underline"
+                            >
+                                <X className="h-3 w-3" />
+                                Clear filters
+                            </button>
+                        )}
                     </div>
                 </div>
 
                 <div className="rounded-[24px] bg-white p-6 border border-[#EDF1F7]">
-                    <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div className="text-[16px] font-semibold text-[#1f2837]">Leads</div>
-                        <div className="flex flex-col gap-3 md:items-end">
-                            <div className="flex flex-wrap items-center gap-4">
-                                <label className="flex items-center gap-2 text-[12px] text-[#1f2837]">
-                                    <input
-                                        type="checkbox"
-                                        checked={showCurrent}
-                                        onChange={(e) => setShowCurrent(e.target.checked)}
-                                        className="peer sr-only"
-                                    />
-                                    <span className="relative flex h-4 w-4 items-center justify-center rounded-[3px] border border-[#c7ced9] bg-white peer-checked:border-[#0aa5ff] peer-checked:bg-[#0aa5ff]">
-                                        <span className="absolute hidden h-2 w-[6px] -rotate-45 border-b-[2px] border-l-[2px] border-white peer-checked:block" />
+                    <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                        <div className="text-[18px] font-semibold text-[#1f2837]">Leads Overview</div>
+
+                        {/* Filters Container */}
+                        <div className="flex flex-col gap-4 md:items-end">
+                            {/* Year Filters */}
+                            <div className="flex items-center gap-2 rounded-xl bg-[#f8fafc] p-1">
+                                <button
+                                    onClick={() => setShowCurrent(!showCurrent)}
+                                    className={cn(
+                                        'px-4 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
+                                        showCurrent
+                                            ? 'bg-[#0aa5ff] text-white shadow-sm'
+                                            : 'bg-transparent text-[#64748b] hover:bg-white hover:text-[#1f2837]'
+                                    )}
+                                >
+                                    <span className="flex items-center gap-2">
+                                        <span className={cn('w-2 h-2 rounded-full', showCurrent ? 'bg-white' : 'bg-[#0aa5ff]')} />
+                                        Current Year
                                     </span>
-                                    Current year
-                                </label>
-                                <label className="flex items-center gap-2 text-[12px] text-[#1f2837]">
-                                    <input
-                                        type="checkbox"
-                                        checked={showLast}
-                                        onChange={(e) => setShowLast(e.target.checked)}
-                                        className="peer sr-only"
-                                    />
-                                    <span className="relative flex h-4 w-4 items-center justify-center rounded-[3px] border border-[#c7ced9] bg-white peer-checked:border-[#0aa5ff] peer-checked:bg-[#0aa5ff]">
-                                        <span className="absolute hidden h-2 w-[6px] -rotate-45 border-b-[2px] border-l-[2px] border-white peer-checked:block" />
+                                </button>
+                                <button
+                                    onClick={() => setShowLast(!showLast)}
+                                    className={cn(
+                                        'px-4 py-2 rounded-lg text-[13px] font-medium transition-all duration-200',
+                                        showLast
+                                            ? 'bg-[#6ec2ff] text-white shadow-sm'
+                                            : 'bg-transparent text-[#64748b] hover:bg-white hover:text-[#1f2837]'
+                                    )}
+                                >
+                                    <span className="flex items-center gap-2">
+                                        <span className={cn('w-2 h-2 rounded-full', showLast ? 'bg-white' : 'bg-[#6ec2ff]')} />
+                                        Last Year
                                     </span>
-                                    Last Year
-                                </label>
+                                </button>
                             </div>
-                            <div className="flex flex-wrap items-center gap-4">
-                                {sourceMeta.map((src) => (
+
+                            {/* Source Filters */}
+                            <div className="flex items-center gap-1 rounded-xl bg-[#f8fafc] p-1">
+                                {sourceFilterOptions.map((src) => (
                                     <button
                                         key={src.key}
                                         onClick={() => setSelectedSource(src.key)}
-                                        className="flex items-center gap-2 text-[12px]"
-                                        aria-pressed={selectedSource === src.key}
+                                        className={cn(
+                                            'px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all duration-200',
+                                            selectedSource === src.key
+                                                ? 'bg-white text-[#1f2837] shadow-sm border border-[#e2e8f0]'
+                                                : 'bg-transparent text-[#64748b] hover:bg-white/50'
+                                        )}
                                     >
-                                        <span
-                                            className={`flex h-3 w-3 items-center justify-center rounded-full border ${selectedSource === src.key ? 'border-[#ff3b30]' : 'border-[#c7ced9]'}`}
-                                        >
-                                            {selectedSource === src.key && <span className="h-1.5 w-1.5 rounded-full bg-[#ff3b30]" />}
-                                        </span>
-                                        <span className="text-[#1f2837]">{src.label}</span>
+                                        {src.label}
                                     </button>
                                 ))}
                             </div>

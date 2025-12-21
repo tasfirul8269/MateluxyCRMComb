@@ -85,92 +85,94 @@ export interface OffPlanProperty {
     isActive: boolean;
     createdAt: string;
     updatedAt: string;
+    leadsCount?: number;
 }
 
 export interface CreateOffPlanPropertyDto {
     developerId: string;
 
     // Specific Details
-    emirate?: string;
-    launchType?: string;
-    projectHighlight?: string;
-    propertyType?: string[];
-    plotArea?: number;
-    area?: number;
-    bedrooms?: number;
-    kitchens?: number;
-    bathrooms?: number;
+    emirate?: string | null;
+    launchType?: string | null;
+    projectHighlight?: string | null;
+    propertyType?: string[] | null;
+    plotArea?: number | null;
+    area?: number | null;
+    bedrooms?: number | null;
+    kitchens?: number | null;
+    bathrooms?: number | null;
 
     // Locations
-    address?: string;
-    latitude?: number;
-    longitude?: number;
-    style?: string;
-    focalPoint?: string;
-    focalPointImage?: string;
+    address?: string | null;
+    latitude?: number | null;
+    longitude?: number | null;
+    style?: string | null;
+    focalPoint?: string | null;
+    focalPointImage?: string | null;
     nearbyHighlights?: Array<{
-        title: string;
-        subtitle: string;
-        highlights: Array<{
-            name: string;
-            image?: string;
-        }>;
-    }>;
+        title?: string | null;
+        subtitle?: string | null;
+        highlights?: Array<{
+            name?: string | null;
+            image?: string | null;
+        }> | null;
+    }> | null;
 
     // Price Tab
-    startingPrice?: number;
-    serviceCharges?: number;
-    brokerFee?: string;
-    roiPotential?: number;
+    startingPrice?: number | null;
+    serviceCharges?: number | null;
+    brokerFee?: string | null;
+    roiPotential?: number | null;
     paymentPlan?: {
-        title: string;
-        subtitle: string;
-        milestones: Array<{
-            label: string;
-            percentage: string;
-            subtitle: string;
-        }>;
-    };
+        title?: string | null;
+        subtitle?: string | null;
+        milestones?: Array<{
+            label?: string | null;
+            percentage?: string | null;
+            subtitle?: string | null;
+        }> | null;
+    } | null;
 
     // DLD & Status
-    dldPermitNumber?: string;
-    dldQrCode?: string;
-    projectStage?: string;
-    constructionProgress?: number;
-    handoverDate?: string;
+    dldPermitNumber?: string | null;
+    dldQrCode?: string | null;
+    projectStage?: string | null;
+    constructionProgress?: number | null;
+    handoverDate?: string | null;
 
     // General Details
-    projectTitle?: string;
-    shortDescription?: string;
-    projectDescription?: string;
+    projectTitle?: string | null;
+    shortDescription?: string | null;
+    projectDescription?: string | null;
 
     // Media
-    coverPhoto?: string;
-    videoUrl?: string;
-    agentVideoUrl?: string;
-    virtualTourUrl?: string;
-    exteriorMedia?: string[];
-    interiorMedia?: string[];
+    coverPhoto?: string | null;
+    videoUrl?: string | null;
+    agentVideoUrl?: string | null;
+    virtualTourUrl?: string | null;
+    exteriorMedia?: string[] | null;
+    interiorMedia?: string[] | null;
 
     // Additional
-    reference?: string;
-    brochure?: string;
-    amenitiesCover?: string;
-    amenitiesTitle?: string;
-    amenitiesSubtitle?: string;
+    reference?: string | null;
+    brochure?: string | null;
+    amenitiesCover?: string | null;
+    amenitiesTitle?: string | null;
+    amenitiesSubtitle?: string | null;
     amenities?: Array<{
-        name: string;
-        icon: string;
-    }>;
+        name?: string | null;
+        icon?: string | null;
+    }> | null;
     floorPlans?: Array<{
-        propertyType: string;
-        livingArea: string;
-        price: string;
-        floorPlanImage?: string;
-    }>;
+        propertyType?: string | null;
+        livingArea?: string | null;
+        price?: string | null;
+        floorPlanImage?: string | null;
+    }> | null;
 
-    areaExperts?: Record<string, string[]>;
-    projectExperts?: string[];
+    areaExperts?: Record<string, string[]> | null;
+    projectExperts?: string[] | null;
+    assignedAgentId?: string | null;
 }
 
 export const offPlanPropertyService = {

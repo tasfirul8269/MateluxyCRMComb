@@ -64,6 +64,13 @@ export function AgentTab({ register, setValue, watch }: AgentTabProps) {
         register('projectExperts');
     }, [register]);
 
+    // Auto-select first location if data exists
+    useEffect(() => {
+        if (!selectedLocation && Object.keys(areaExperts).length > 0) {
+            setSelectedLocation(Object.keys(areaExperts)[0]);
+        }
+    }, [areaExperts, selectedLocation]);
+
     const handleLocationSelect = (location: string) => {
         setSelectedLocation(location);
     };

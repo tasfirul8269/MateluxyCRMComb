@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UseFormRegister, Control, FieldErrors, UseFormSetValue, UseFormWatch } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,11 +21,23 @@ export function AgentTab({ register, control, errors, setValue, watch }: AgentTa
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
     const [showMore, setShowMore] = useState(false);
+    const [hasInitialized, setHasInitialized] = useState(false);
 
     // Fetch agents from database
     const { data: agents = [], isLoading } = useAgents(searchQuery);
 
     const assignedAgentId = watch('assignedAgentId');
+
+    // Initialize selectedAgent from assignedAgentId once agents are loaded
+    useEffect(() => {
+        if (!hasInitialized && agents.length > 0 && assignedAgentId) {
+            const agent = agents.find(a => a.id === assignedAgentId);
+            if (agent) {
+                setSelectedAgent(agent);
+                setHasInitialized(true);
+            }
+        }
+    }, [agents, assignedAgentId, hasInitialized]);
 
     const handleSelectAgent = (agent: Agent) => {
         setSelectedAgent(agent);

@@ -68,7 +68,7 @@ export class AuthController {
     @HttpCode(HttpStatus.OK)
     async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
         const user = req.user as any;
-        await this.authService.logout(user.userId);
+        await this.authService.logout(user.id);
 
         const isProduction = process.env.NODE_ENV === 'production' || process.env.RENDER === 'true';
         res.clearCookie('access_token', {

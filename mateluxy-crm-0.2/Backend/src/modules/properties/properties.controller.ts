@@ -170,7 +170,7 @@ export class PropertiesController {
             if (result) fileUrls.titleDeed = result;
         }
 
-        return this.propertiesService.createWithFiles(createPropertyDto, fileUrls, user?.userId, ip);
+        return this.propertiesService.createWithFiles(createPropertyDto, fileUrls, user?.id, ip);
     }
 
     @Patch(':id')
@@ -239,7 +239,7 @@ export class PropertiesController {
             if (result) fileUrls.titleDeed = result;
         }
 
-        return this.propertiesService.updateWithFiles(id, updatePropertyDto, fileUrls, user?.userId, ip);
+        return this.propertiesService.updateWithFiles(id, updatePropertyDto, fileUrls, user?.id, ip);
     }
 
     @Patch(':id/status')
@@ -250,7 +250,7 @@ export class PropertiesController {
         @GetUser() user: any,
         @Ip() ip: string
     ) {
-        return this.propertiesService.updateStatus(id, status, user?.userId, ip);
+        return this.propertiesService.updateStatus(id, status, user?.id, ip);
     }
 
     @Patch(':id/toggle-active')
@@ -261,20 +261,20 @@ export class PropertiesController {
         @GetUser() user: any,
         @Ip() ip: string
     ) {
-        return this.propertiesService.toggleActive(id, isActive, user?.userId, ip);
+        return this.propertiesService.toggleActive(id, isActive, user?.id, ip);
     }
 
     @Delete(':id')
     @UseGuards(JwtAuthGuard)
     delete(@Param('id') id: string, @GetUser() user: any, @Ip() ip: string) {
-        return this.propertiesService.delete(id, user?.userId, ip);
+        return this.propertiesService.delete(id, user?.id, ip);
     }
 
     // ============ PROPERTY FINDER SYNC ============
 
     @Post('sync-to-pf')
     syncFromPropertyFinder(@GetUser() user?: any, @Ip() ip?: string) {
-        return this.propertiesService.syncFromPropertyFinder(user?.userId, ip);
+        return this.propertiesService.syncFromPropertyFinder(user?.id, ip);
     }
 
     @Post(':id/sync-to-pf')

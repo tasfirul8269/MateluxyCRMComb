@@ -5,7 +5,9 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { Role } from '@prisma/client';
 import { GetUser } from '../../common/decorators/get-user.decorator';
 import { UploadService } from '../upload/upload.service';
@@ -17,8 +19,9 @@ export class UsersController {
         private readonly uploadService: UploadService,
     ) { }
 
-    @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.ADMIN)
+    @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+    @Roles(Role.ADMIN, Role.MODERATOR)
+    @Permissions('Users')
     @Post('create')
     @UseInterceptors(FileInterceptor('avatar'))
     async create(
@@ -48,7 +51,7 @@ export class UsersController {
                 }
             }
 
-            const result = await this.usersService.create(createUserDto, avatarUrl, user?.userId, ip);
+            const result = await this.usersService.create(createUserDto, avatarUrl, user?.id, ip);
             console.log('User created with avatarUrl:', result.avatarUrl);
             console.log('User created with permissions:', result.permissions);
             return result;
@@ -61,8 +64,9 @@ export class UsersController {
         }
     }
 
-    @UseGuards(JwtAuthGuard, RolesGuard)
+    @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
     @Roles(Role.ADMIN, Role.MODERATOR)
+    @Permissions('Users')
     @Get()
     findAll(
         @Query('search') search?: string,
@@ -74,18 +78,20 @@ export class UsersController {
     @UseGuards(JwtAuthGuard)
     @Get('me')
     async getMe(@GetUser() user: any) {
-        return this.usersService.findById(user.userId);
+        return this.usersService.findById(user.id);
     }
 
-    @UseGuards(JwtAuthGuard, RolesGuard)
+    @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
     @Roles(Role.ADMIN)
+    @Permissions('Users')
     @Delete(':id')
     remove(@Param('id') id: string, @GetUser() user: any, @Ip() ip?: string) {
-        return this.usersService.remove(id, user?.userId, ip);
+        return this.usersService.remove(id, user?.id, ip);
     }
 
-    @UseGuards(JwtAuthGuard, RolesGuard)
+    @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
     @Roles(Role.ADMIN)
+    @Permissions('Users')
     @Patch(':id')
     @UseInterceptors(FileInterceptor('avatar'))
     async update(
@@ -120,6 +126,6 @@ export class UsersController {
             }
         }
 
-        return this.usersService.update(id, updateUserDto, avatarUrl, user?.userId, ip);
+        return this.usersService.update(id, updateUserDto, avatarUrl, user?.id, ip);
     }
 }

@@ -11,7 +11,7 @@ export class LeadsController {
 
     @Post()
     create(@Body() createLeadDto: CreateLeadDto, @GetUser() user?: any, @Ip() ip?: string) {
-        return this.leadsService.create(createLeadDto, user?.userId, ip);
+        return this.leadsService.create(createLeadDto, user?.id, ip);
     }
 
     @Get('stats')
@@ -42,7 +42,7 @@ export class LeadsController {
         @GetUser() user?: any,
         @Ip() ip?: string
     ) {
-        return this.leadsService.updateResponsible(id, agentId, user?.userId, ip);
+        return this.leadsService.updateResponsible(id, agentId, user?.id, ip);
     }
 }
 

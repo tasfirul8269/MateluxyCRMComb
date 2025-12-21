@@ -1,26 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useDraggable } from '@dnd-kit/core';
+import { useAuthStore } from '@/lib/store/auth-store';
 import {
-    LayoutDashboard,
-    Building2,
-    FileText,
-    Users,
-    UserCircle,
-    Settings,
-    Lock,
-    Bell,
-    FolderOpen,
-    Activity,
     ChevronDown,
-    ChevronRight,
-    Briefcase,
-    Layers,
-    Code2,
     Construction,
     GripVertical
 } from 'lucide-react';
@@ -32,77 +19,7 @@ import {
     DialogDescription,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-
-export interface MenuItem {
-    title: string;
-    icon: React.ElementType;
-    iconKey: string; // Key for icon lookup from ICON_MAP (for serialization)
-    href: string;
-    submenu?: { title: string; href: string; underDevelopment?: boolean }[];
-    underDevelopment?: boolean;
-}
-
-// Items that are under development
-const UNDER_DEVELOPMENT_ITEMS = [
-    'File Manager',
-    'Agent App Notifications',
-    'System Settings',
-    'Password Manager'
-];
-
-export const MENU_ITEMS: MenuItem[] = [
-    { title: 'Dashboard', icon: LayoutDashboard, iconKey: 'LayoutDashboard', href: '/dashboard' },
-    {
-        title: 'Properties',
-        icon: Building2,
-        iconKey: 'Building2',
-        href: '/properties',
-        submenu: [
-            { title: 'Active Properties', href: '/properties/all' },
-            { title: 'Add New Property', href: '/properties/new' },
-            { title: 'Draft Properties', href: '/properties/draft' },
-            { title: 'From Agents', href: '/properties/agents', underDevelopment: true },
-            { title: 'Unpublished', href: '/properties/unpublished' },
-            { title: 'Rejected Properties', href: '/properties/rejected' },
-            { title: 'Sold Properties', href: '/properties/sold' },
-            { title: 'Rented Properties', href: '/properties/rented' },
-        ],
-    },
-    {
-        title: 'Off Plan',
-        icon: Layers,
-        iconKey: 'Layers',
-        href: '/off-plan',
-        submenu: [
-            { title: 'Add New Property', href: '/off-plan/new' },
-            { title: 'All Properties', href: '/off-plan' },
-            { title: 'Draft Properties', href: '/off-plan/draft' },
-            { title: 'From Agents', href: '/off-plan/agents', underDevelopment: true },
-            { title: 'Unpublished', href: '/off-plan/unpublished' },
-        ],
-    },
-    {
-        title: 'Leads',
-        icon: Users,
-        iconKey: 'Users',
-        href: '/leads',
-        submenu: [
-            { title: 'Add Lead', href: '/leads/new' },
-            { title: 'Website Leads', href: '/leads/website', underDevelopment: true },
-            { title: '3rd Party Leads', href: '/leads/3rd-party' },
-            { title: 'Property Finder', href: '/leads/property-finder' },
-        ],
-    },
-    { title: 'Agents', icon: UserCircle, iconKey: 'UserCircle', href: '/agents' },
-    { title: 'Developers', icon: Briefcase, iconKey: 'Briefcase', href: '/developers' },
-    { title: 'Integration', icon: Code2, iconKey: 'Code2', href: '/integration' },
-    { title: 'Activity Logs', icon: Activity, iconKey: 'Activity', href: '/activity-logs' },
-    { title: 'File Manager', icon: FolderOpen, iconKey: 'FolderOpen', href: '/file-manager', underDevelopment: true },
-    { title: 'Agent App Notifications', icon: Bell, iconKey: 'Bell', href: '/notifications', underDevelopment: true },
-    { title: 'Admin & Editors', icon: Lock, iconKey: 'Lock', href: '/users' },
-    { title: 'System Settings', icon: Settings, iconKey: 'Settings', href: '/settings', underDevelopment: true },
-    { title: 'Password Manager', icon: Lock, iconKey: 'Lock', href: '/passwords', underDevelopment: true },
-];
+import { MENU_ITEMS, MenuItem, UNDER_DEVELOPMENT_ITEMS } from '@/lib/config/menu';
 
 // Draggable wrapper for sidebar menu items
 function DraggableMenuItem({ item, children }: { item: MenuItem; children: React.ReactNode }) {
@@ -149,6 +66,7 @@ function DraggableMenuItem({ item, children }: { item: MenuItem; children: React
 
 export function Sidebar() {
     const pathname = usePathname();
+    const { user } = useAuthStore();
     // No menu expanded by default
     const [expandedMenu, setExpandedMenu] = useState<string | null>(null);
     const [showUnderDevDialog, setShowUnderDevDialog] = useState(false);
@@ -164,6 +82,23 @@ export function Sidebar() {
         setSelectedFeature(title);
         setShowUnderDevDialog(true);
     };
+
+    const filteredMenuItems = useMemo(() => {
+        if (!user) return [];
+        // Admin gets everything
+        if (user.role === 'ADMIN') return MENU_ITEMS;
+
+        // Moderator gets based on permissions
+        if (user.role === 'MODERATOR') {
+            return MENU_ITEMS.filter(item => {
+                if (!item.permission) return true; // Show items without permission requirement? Or hide? Assuming show for public stuff, but these are all protected.
+                // If item has a permission, user must have it
+                return user.permissions?.includes(item.permission);
+            });
+        }
+
+        return [];
+    }, [user]);
 
     return (
         <>
@@ -195,7 +130,7 @@ export function Sidebar() {
                 {/* Menu */}
                 <div className="relative z-10 flex-1 overflow-y-auto px-4 pt-6 pb-20 scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                     <nav className="space-y-1">
-                        {MENU_ITEMS.map((item) => {
+                        {filteredMenuItems.map((item) => {
                             const isParentActive = item.submenu?.some(sub => pathname === sub.href);
                             const isDirectActive = pathname === item.href;
                             const isExpanded = expandedMenu === item.title;

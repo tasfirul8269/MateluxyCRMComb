@@ -57,7 +57,7 @@ export class DevelopersController {
             }
         }
 
-        return this.developersService.create(createDeveloperDto, logoUrl, salesManagerPhotoUrl, user?.userId, ip);
+        return this.developersService.create(createDeveloperDto, logoUrl, salesManagerPhotoUrl, user?.id, ip);
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
@@ -125,13 +125,13 @@ export class DevelopersController {
             }
         }
 
-        return this.developersService.update(id, updateDeveloperDto, logoUrl, salesManagerPhotoUrl, user?.userId, ip);
+        return this.developersService.update(id, updateDeveloperDto, logoUrl, salesManagerPhotoUrl, user?.id, ip);
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(Role.ADMIN)
     @Delete(':id')
     remove(@Param('id') id: string, @GetUser() user?: any, @Ip() ip?: string) {
-        return this.developersService.remove(id, user?.userId, ip);
+        return this.developersService.remove(id, user?.id, ip);
     }
 }

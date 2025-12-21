@@ -7,7 +7,7 @@ import { Plus, X, MoreHorizontal, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useBottomNavStore, PinnedNavItem } from '@/lib/store/bottom-nav-store';
 import { getIcon } from '@/lib/utils/icons';
-import { MENU_ITEMS, MenuItem } from './sidebar';
+import { MENU_ITEMS, MenuItem } from '@/lib/config/menu';
 import { useNavDnd } from './nav-dnd-provider';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {

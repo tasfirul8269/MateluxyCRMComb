@@ -16,7 +16,7 @@ export class OffPlanPropertiesController {
     @Roles(Role.ADMIN)
     @Post()
     create(@Body() createOffPlanPropertyDto: CreateOffPlanPropertyDto, @GetUser() user?: any, @Ip() ip?: string) {
-        return this.offPlanPropertiesService.create(createOffPlanPropertyDto, user?.userId, ip);
+        return this.offPlanPropertiesService.create(createOffPlanPropertyDto, user?.id, ip);
     }
 
     @UseGuards(JwtAuthGuard)
@@ -87,13 +87,13 @@ export class OffPlanPropertiesController {
         @GetUser() user?: any,
         @Ip() ip?: string,
     ) {
-        return this.offPlanPropertiesService.update(id, updateOffPlanPropertyDto, user?.userId, ip);
+        return this.offPlanPropertiesService.update(id, updateOffPlanPropertyDto, user?.id, ip);
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(Role.ADMIN)
     @Delete(':id')
     remove(@Param('id') id: string, @GetUser() user?: any, @Ip() ip?: string) {
-        return this.offPlanPropertiesService.remove(id, user?.userId, ip);
+        return this.offPlanPropertiesService.remove(id, user?.id, ip);
     }
 }

@@ -22,7 +22,7 @@ export class AgentsController {
     @Post('sync')
     @Post('sync')
     syncFromPropertyFinder(@GetUser() user?: any, @Ip() ip?: string) {
-        return this.agentsService.syncFromPropertyFinder(user?.userId, ip);
+        return this.agentsService.syncFromPropertyFinder(user?.id, ip);
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
@@ -82,7 +82,7 @@ export class AgentsController {
             licenseDocumentUrl = await this.uploadService.uploadFile(files.licenseDocument[0]) || undefined;
         }
 
-        return this.agentsService.create(createAgentDto, photoUrl, vcardUrl, licenseDocumentUrl, user?.userId, ip);
+        return this.agentsService.create(createAgentDto, photoUrl, vcardUrl, licenseDocumentUrl, user?.id, ip);
     }
 
 
@@ -182,34 +182,34 @@ export class AgentsController {
             licenseDocumentUrl = await this.uploadService.uploadFile(files.licenseDocument[0]) || undefined;
         }
 
-        return this.agentsService.update(id, updateAgentDto, photoUrl, vcardUrl, licenseDocumentUrl, user?.userId, ip);
+        return this.agentsService.update(id, updateAgentDto, photoUrl, vcardUrl, licenseDocumentUrl, user?.id, ip);
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(Role.ADMIN)
     @Delete(':id')
     remove(@Param('id') id: string, @GetUser() user?: any, @Ip() ip?: string) {
-        return this.agentsService.remove(id, user?.userId, ip);
+        return this.agentsService.remove(id, user?.id, ip);
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(Role.ADMIN)
     @Patch(':id/activate')
     activate(@Param('id') id: string, @GetUser() user?: any, @Ip() ip?: string) {
-        return this.agentsService.activate(id, user?.userId, ip);
+        return this.agentsService.activate(id, user?.id, ip);
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(Role.ADMIN)
     @Patch(':id/deactivate')
     deactivate(@Param('id') id: string, @GetUser() user?: any, @Ip() ip?: string) {
-        return this.agentsService.deactivate(id, user?.userId, ip);
+        return this.agentsService.deactivate(id, user?.id, ip);
     }
 
     @UseGuards(JwtAuthGuard, RolesGuard)
     @Roles(Role.ADMIN)
     @Post(':id/submit-verification')
     submitForVerification(@Param('id') id: string, @GetUser() user?: any, @Ip() ip?: string) {
-        return this.agentsService.submitForVerification(id, user?.userId, ip);
+        return this.agentsService.submitForVerification(id, user?.id, ip);
     }
 }

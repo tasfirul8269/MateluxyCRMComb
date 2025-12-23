@@ -15,7 +15,7 @@ export const useUpload = () => {
                 .find(row => row.startsWith('accessToken='))
                 ?.split('=')[1];
 
-            const response = await fetch('http://localhost:3001/upload', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/upload`, {
                 method: 'POST',
                 headers: {
                     ...(token ? { 'Authorization': `Bearer ${token}` } : {})
